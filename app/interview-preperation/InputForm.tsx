@@ -17,8 +17,8 @@ interface InputFormProps {
 export default function InputForm({ onSubmit = () => {} }: InputFormProps) {
   const [formData, setFormData] = useState({
     companyName: 'Google',
-    role: 'Frontend Developer',
-    missingSkills: 'System Design, Distributed Systems',
+    role: 'Junior Developer',
+    missingSkills: 'C++, Distributed Systems',
     roleSeniority: 'Mid',
     techStack: 'JavaScript, React, Node.js',
     interviewType: 'Technical',

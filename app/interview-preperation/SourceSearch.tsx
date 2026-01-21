@@ -51,9 +51,9 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
       const data = await res.json();
 
       if (data.success && data.data && data.data.curatedSources) {
-        // Map backend sources to your frontend format if needed
+        // Ensure unique keys by combining url and index
         const mappedSources = data.data.curatedSources.map((src: any, idx: number) => ({
-          id: src.url || idx.toString(),
+          id: src.url ? `${src.url}__${idx}` : idx.toString(),
           title: src.title,
           source: src.domain,
           url: src.url,
