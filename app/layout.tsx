@@ -6,8 +6,8 @@ import "./globals.css"
 const geistMono = GeistMono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Tactical Operations Dashboard",
-  description: "Tactical command and control system",
+  title: "AI-powered Carreer Preparation Platform",
+  description: "Optimize your career journey with AI Tutor",
     generator: 'v0.app'
 }
 

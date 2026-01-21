@@ -7,7 +7,7 @@ import CommandCenterPage from "./command-center/page"
 import AgentNetworkPage from "./agent-network/page"
 import OperationsPage from "./operations/page"
 import IntelligencePage from "./intelligence/page"
-import SystemsPage from "./userProfile/page"
+// import SystemsPage from "./userProfile/page"
 import UserProfilePage from "./userProfile/page"
 
 export default function TacticalDashboard() {
