@@ -33,12 +33,12 @@ export default function InterviewPreparationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-6">
+    <div className="min-h-screen bg-gradient-to-b from-black via-neutral-900 to-black p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold text-cyan-400 mb-2 neon-glow">
+        <h1 className="text-4xl font-bold text-orange-500 mb-2 neon-glow">
           Interview Preparation
         </h1>
-        <p className="text-slate-400 mb-8">Master your interview with AI-powered preparation</p>
+        <p className="text-neutral-400 mb-8">Master your interview with AI-powered preparation</p>
 
         {step === 'input' && <InputForm onSubmit={handleInputSubmit} />}
 
