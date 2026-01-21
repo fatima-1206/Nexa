@@ -29,38 +29,41 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
   const searchSources = async () => {
     setLoading(true);
     try {
-      const query = `${interviewData.role} interview preparation ${interviewData.company} ${interviewData.skills.join(' ')}`;
-      
-      const mockSources = [
-        {
-          id: '1',
-          title: `${interviewData.role} Interview Questions for ${interviewData.company}`,
-          source: 'LeetCode',
-          url: 'https://leetcode.com',
-          description: 'Curated interview questions and solutions',
-          relevance: 95,
-        },
-        {
-          id: '2',
-          title: `System Design for ${interviewData.role}`,
-          source: 'System Design Primer',
-          url: 'https://github.com/donnemartin/system-design-primer',
-          description: 'Learn system design concepts required for interviews',
-          relevance: 90,
-        },
-        {
-          id: '3',
-          title: `${interviewData.company} Engineering Culture & Practices`,
-          source: 'Glassdoor',
-          url: 'https://glassdoor.com',
-          description: 'Company insights and interview experience reviews',
-          relevance: 85,
-        },
-      ];
+      // Prepare the payload for your API
+      const payload = {
+        companyName: interviewData.company,
+        role: interviewData.role,
+        missingSkills: interviewData.skills,
+        roleSeniority: interviewData.experience,
+        techStack: [], // Add if you have tech stack info
+        interviewType: '', // Add if you have interview type info
+      };
 
-      setSources(mockSources);
+      const res = await fetch('/api/find-sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (data.success && data.data && data.data.curatedSources) {
+        // Map backend sources to your frontend format if needed
+        const mappedSources = data.data.curatedSources.map((src: any, idx: number) => ({
+          id: src.url || idx.toString(),
+          title: src.title,
+          source: src.domain,
+          url: src.url,
+          description: src.snippet,
+          relevance: src.credibilityScore || 80,
+        }));
+        setSources(mappedSources);
+      } else {
+        setSources([]);
+      }
     } catch (error) {
       console.error('Error searching sources:', error);
+      setSources([]);
     } finally {
       setLoading(false);
     }

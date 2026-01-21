@@ -205,9 +205,9 @@ function hardFilterSources(sources: any[]): any[] {
 }
 
 // Final Output
-async function searchForInterviewPrep(
+export async function searchForInterviewPrep(
     searchInput: SearchInput
-    ): Promise<SearchOutput> {
+): Promise<SearchOutput> {
     console.log("🔍 Step 1: Expanding missing skills into search queries...");
     const skillQueries = await expandMissingSkillsToQueries(
         searchInput.missingSkills,
@@ -234,9 +234,9 @@ async function searchForInterviewPrep(
     const output: SearchOutput = {
         curatedSources: filteredResults,
         metadata: {
-        date: new Date().toISOString(),
-        credibility: "high",
-        depth: "comprehensive"
+            date: new Date().toISOString(),
+            credibility: "high",
+            depth: "comprehensive"
         }
     };
 
@@ -245,22 +245,3 @@ async function searchForInterviewPrep(
 
     return output;
 }
-
-// Example usage
-const exampleInput: SearchInput = {
-    companyName: "Google",
-    role: "Senior Engineer",
-    missingSkills: ["C++", "desktop development"],
-    roleSeniority: "senior",
-    techStack: ["C++", "OpenGL"],
-    interviewType: "FAANG"
-};
-
-searchForInterviewPrep(exampleInput)
-    .then(result => {
-        console.log("\n📚 Search Results:");
-        console.log(JSON.stringify(result, null, 2));
-    })
-    .catch(error => {
-        console.error("Error:", error);
-    });
