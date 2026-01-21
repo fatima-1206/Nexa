@@ -127,16 +127,16 @@ export default function IntelligencePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-wider">INTELLIGENCE CENTER</h1>
-          <p className="text-sm text-neutral-400">Classified reports and threat analysis</p>
+          <h1 className="text-2xl font-bold text-white tracking-wider">RECENT JOBS</h1>
+          <p className="text-sm text-neutral-400">Available Jobs According to your Skillset</p>
         </div>
-        <div className="flex gap-2">
+        {/* <div className="flex gap-2">
           <Button className="bg-orange-500 hover:bg-orange-600 text-white">New Report</Button>
           <Button className="bg-orange-500 hover:bg-orange-600 text-white">
             <Filter className="w-4 h-4 mr-2" />
             Filter
           </Button>
-        </div>
+        </div> */}
       </div>
 
       {/* Stats and Search */}
@@ -159,7 +159,7 @@ export default function IntelligencePage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-neutral-400 tracking-wider">TOTAL REPORTS</p>
+                <p className="text-xs text-neutral-400 tracking-wider">TOTAL JOBS</p>
                 <p className="text-2xl font-bold text-white font-mono">1,247</p>
               </div>
               <FileText className="w-8 h-8 text-white" />
@@ -171,7 +171,7 @@ export default function IntelligencePage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-neutral-400 tracking-wider">CRITICAL THREATS</p>
+                <p className="text-xs text-neutral-400 tracking-wider">JOBS -</p>
                 <p className="text-2xl font-bold text-red-500 font-mono">12</p>
               </div>
               <AlertTriangle className="w-8 h-8 text-red-500" />
