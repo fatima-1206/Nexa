@@ -308,6 +308,7 @@ export default function UserProfilePage() {
         {/* LEFT COLUMN - Skills & Experience */}
         <div className="space-y-6">
           {/* Experience Section */}
+          {experiences && experiences.length > 0 && (
           <Card className="bg-neutral-900 border-neutral-700">
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -349,7 +350,9 @@ export default function UserProfilePage() {
               </div>
             </CardContent>
           </Card>
+          )}
            {/* Skills Section */}
+          {skills && skills.length > 0 && (
           <Card className="bg-neutral-900 border-neutral-700">
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -370,12 +373,13 @@ export default function UserProfilePage() {
               </div>
             </CardContent>
           </Card>
-
+          )}
         </div>
 
         {/* RIGHT COLUMN - Education, Certifications & Projects */}
         <div className="space-y-6">
           {/* Education */}
+          {education && education.length > 0 && (
           <Card className="bg-neutral-900 border-neutral-700">
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -406,8 +410,10 @@ export default function UserProfilePage() {
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* Certifications */}
+          {certifications && certifications.length > 0 && (
           <Card className="bg-neutral-900 border-neutral-700">
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -429,8 +435,10 @@ export default function UserProfilePage() {
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* Projects Section */}
+          {projects && projects.length > 0 && (
           <Card className="bg-neutral-900 border-neutral-700">
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -461,6 +469,7 @@ export default function UserProfilePage() {
               </div>
             </CardContent>
           </Card>
+          )}
         </div>
       </div>
       {/* Download Resume Button */}
