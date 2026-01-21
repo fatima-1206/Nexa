@@ -22,6 +22,7 @@ pnpm install
 
 npm install @tavily/core
 npm install groq-sdk
+npm install lucide-react
 ```
 
 ### 2. Configure GitHub Token
