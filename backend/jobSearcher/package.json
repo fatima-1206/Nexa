@@ -1,0 +1,30 @@
+{
+  "name": "job-searcher",
+  "version": "1.0.0",
+  "description": "AI-powered job searcher using SerpAPI to match jobs with user skills",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "test": "ts-node src/test.ts"
+  },
+  "keywords": [
+    "job",
+    "search",
+    "serpapi",
+    "skills",
+    "matching"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "dotenv": "^16.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
