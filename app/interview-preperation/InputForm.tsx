@@ -5,30 +5,34 @@ import { Button } from '@/components/ui/button';
 
 interface InputFormProps {
   onSubmit?: (data: {
-    skills: string[];
+    companyName: string;
     role: string;
-    company: string;
-    experience: string;
+    missingSkills: string[];
+    roleSeniority: string;
+    techStack: string[];
+    interviewType: string;
   }) => void;
 }
 
-// ...existing code...
 export default function InputForm({ onSubmit = () => {} }: InputFormProps) {
-    const [formData, setFormData] = useState({
-      skills: 'JavaScript, React, Node.js',
-      role: 'Frontend Developer',
-      company: 'Google',
-      experience: '3',
-    });
-  // ...existing code...
+  const [formData, setFormData] = useState({
+    companyName: 'Google',
+    role: 'Frontend Developer',
+    missingSkills: 'System Design, Distributed Systems',
+    roleSeniority: 'Mid',
+    techStack: 'JavaScript, React, Node.js',
+    interviewType: 'Technical',
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
-      skills: formData.skills.split(',').map(s => s.trim()).filter(s => s),
+      companyName: formData.companyName,
       role: formData.role,
-      company: formData.company,
-      experience: formData.experience,
+      missingSkills: formData.missingSkills.split(',').map(s => s.trim()).filter(s => s),
+      roleSeniority: formData.roleSeniority,
+      techStack: formData.techStack.split(',').map(s => s.trim()).filter(s => s),
+      interviewType: formData.interviewType,
     });
   };
 
@@ -37,18 +41,18 @@ export default function InputForm({ onSubmit = () => {} }: InputFormProps) {
       <div className="bg-neutral-900 border border-neutral-700 rounded-lg p-8 backdrop-blur-sm">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="skills" className="block text-sm font-medium text-neutral-300">
-              Required Skills
+            <label htmlFor="companyName" className="block text-sm font-medium text-neutral-300">
+              Company Name
             </label>
             <div className="mt-1">
               <input
                 type="text"
-                name="skills"
-                id="skills"
+                name="companyName"
+                id="companyName"
                 className="block w-full rounded-md border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-200 placeholder-neutral-500 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
-                placeholder="e.g. JavaScript, React, Node.js"
-                value={formData.skills}
-                onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
+                placeholder="e.g. Google"
+                value={formData.companyName}
+                onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                 required
               />
             </div>
@@ -56,7 +60,7 @@ export default function InputForm({ onSubmit = () => {} }: InputFormProps) {
 
           <div>
             <label htmlFor="role" className="block text-sm font-medium text-neutral-300">
-              Desired Role
+              Role
             </label>
             <div className="mt-1">
               <input
@@ -73,38 +77,83 @@ export default function InputForm({ onSubmit = () => {} }: InputFormProps) {
           </div>
 
           <div>
-            <label htmlFor="company" className="block text-sm font-medium text-neutral-300">
-              Company Name
+            <label htmlFor="missingSkills" className="block text-sm font-medium text-neutral-300">
+              Missing Skills
             </label>
             <div className="mt-1">
               <input
                 type="text"
-                name="company"
-                id="company"
+                name="missingSkills"
+                id="missingSkills"
                 className="block w-full rounded-md border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-200 placeholder-neutral-500 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
-                placeholder="e.g. Google"
-                value={formData.company}
-                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                placeholder="e.g. System Design, Distributed Systems"
+                value={formData.missingSkills}
+                onChange={(e) => setFormData({ ...formData, missingSkills: e.target.value })}
                 required
               />
             </div>
           </div>
 
           <div>
-            <label htmlFor="experience" className="block text-sm font-medium text-neutral-300">
-              Years of Experience
+            <label htmlFor="roleSeniority" className="block text-sm font-medium text-neutral-300">
+              Role Seniority
+            </label>
+            <div className="mt-1">
+              <select
+                name="roleSeniority"
+                id="roleSeniority"
+                className="block w-full rounded-md border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                value={formData.roleSeniority}
+                onChange={(e) => setFormData({ ...formData, roleSeniority: e.target.value })}
+                required
+              >
+                <option value="">Select...</option>
+                <option value="Junior">Junior</option>
+                <option value="Mid">Mid</option>
+                <option value="Senior">Senior</option>
+                <option value="Lead">Lead</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="techStack" className="block text-sm font-medium text-neutral-300">
+              Tech Stack
             </label>
             <div className="mt-1">
               <input
-                type="number"
-                name="experience"
-                id="experience"
+                type="text"
+                name="techStack"
+                id="techStack"
                 className="block w-full rounded-md border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-200 placeholder-neutral-500 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
-                placeholder="e.g. 3"
-                value={formData.experience}
-                onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                placeholder="e.g. JavaScript, React, Node.js"
+                value={formData.techStack}
+                onChange={(e) => setFormData({ ...formData, techStack: e.target.value })}
                 required
               />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="interviewType" className="block text-sm font-medium text-neutral-300">
+              Interview Type
+            </label>
+            <div className="mt-1">
+              <select
+                name="interviewType"
+                id="interviewType"
+                className="block w-full rounded-md border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                value={formData.interviewType}
+                onChange={(e) => setFormData({ ...formData, interviewType: e.target.value })}
+                required
+              >
+                <option value="">Select...</option>
+                <option value="Technical">Technical</option>
+                <option value="Behavioral">Behavioral</option>
+                <option value="System Design">System Design</option>
+                <option value="Coding">Coding</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
           </div>
 

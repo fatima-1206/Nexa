@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button';
 
 interface SourceSearchProps {
   interviewData: {
-    skills: string[];
+    companyName: string;
     role: string;
-    company: string;
-    experience: string;
+    missingSkills: string[];
+    roleSeniority: string;
+    techStack: string[];
+    interviewType: string;
   };
   onComplete: (sources: any[]) => void;
   onBack: () => void;
@@ -24,6 +26,7 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
 
   useEffect(() => {
     searchSources();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const searchSources = async () => {
@@ -31,12 +34,12 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
     try {
       // Prepare the payload for your API
       const payload = {
-        companyName: interviewData.company,
+        companyName: interviewData.companyName,
         role: interviewData.role,
-        missingSkills: interviewData.skills,
-        roleSeniority: interviewData.experience,
-        techStack: [], // Add if you have tech stack info
-        interviewType: '', // Add if you have interview type info
+        missingSkills: interviewData.missingSkills,
+        roleSeniority: interviewData.roleSeniority,
+        techStack: interviewData.techStack,
+        interviewType: interviewData.interviewType,
       };
 
       const res = await fetch('/api/find-sources', {
