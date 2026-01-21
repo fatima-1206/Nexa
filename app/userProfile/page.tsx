@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -17,10 +18,48 @@ import {
   Code,
   Calendar,
   ExternalLink,
+  Upload,
 } from "lucide-react"
+import UploadResume from "./upload"
 
 export default function UserProfilePage() {
-  const profile = {
+  const [userData, setUserData] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Check for existing user data on mount
+  useEffect(() => {
+    const storedData = localStorage.getItem("userData")
+    if (storedData) {
+      try {
+        const parsed = JSON.parse(storedData)
+        setUserData(parsed)
+      } catch (error) {
+        console.error("Error parsing stored data:", error)
+      }
+    }
+    setIsLoading(false)
+  }, [])
+
+  // Handle upload completion
+  const handleUploadComplete = (data: any) => {
+    setUserData(data)
+  }
+
+  // Show upload page if no data exists
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="text-orange-500 text-xl">Loading...</div>
+      </div>
+    )
+  }
+
+  if (!userData) {
+    return <UploadResume onUploadComplete={handleUploadComplete} />
+  }
+
+  // Use uploaded data or default to hardcoded data for demo
+  const profile = userData.profile || {
     name: "Shilok Kumar",
     title: "AI Engineer At Automata AI | Cofounder Of Seerra",
     location: "San Francisco, CA",
@@ -32,7 +71,7 @@ export default function UserProfilePage() {
     summary: "Innovative AI Engineer with 5+ years of experience in machine learning, deep learning, and AI system architecture. Passionate about building scalable AI solutions and leading technical teams. Co-founded Seerra to democratize AI technology for enterprises.",
   }
 
-  const skills = [
+  const skills = userData.skills || [
     "Machine Learning",
     "Deep Learning",
     "Natural Language Processing",
@@ -63,7 +102,7 @@ export default function UserProfilePage() {
     "Jupyter",
   ]
 
-  const experiences = [
+  const experiences = userData.experiences || [
     {
       title: "AI Engineer",
       company: "Automata AI",
@@ -114,7 +153,7 @@ export default function UserProfilePage() {
     },
   ]
 
-  const education = [
+  const education = userData.education || [
     {
       degree: "Master of Science in Computer Science",
       school: "Stanford University",
@@ -133,14 +172,14 @@ export default function UserProfilePage() {
     },
   ]
 
-  const certifications = [
+  const certifications = userData.certifications || [
     { name: "AWS Certified Machine Learning - Specialty", issuer: "Amazon Web Services", year: "2024" },
     { name: "TensorFlow Developer Certificate", issuer: "Google", year: "2023" },
     { name: "Deep Learning Specialization", issuer: "DeepLearning.AI", year: "2022" },
     { name: "Kubernetes Application Developer", issuer: "CNCF", year: "2023" },
   ]
 
-  const projects = [
+  const projects = userData.projects || [
     {
       name: "Neural Architecture Search Platform",
       description: "Automated ML model architecture optimization using reinforcement learning",
@@ -161,84 +200,104 @@ export default function UserProfilePage() {
     },
   ]
 
+  const handleResetData = () => {
+    if (confirm("Are you sure you want to reset your profile data? This will allow you to upload a new resume.")) {
+      localStorage.removeItem("userData")
+      setUserData(null)
+    }
+  }
   return (
     <div className="p-6 space-y-6 max-w-[1800px] mx-auto">
       {/* Header / Profile Summary */}
       <Card className="bg-neutral-900 border-neutral-700">
         <CardContent className="p-8">
-          <div className="flex flex-col lg:flex-row gap-6 items-start">
-            {/* Avatar */}
-            <div className="w-32 h-32 bg-gradient-to-br from-orange-500 to-orange-700 rounded-lg flex items-center justify-center text-4xl font-bold text-white">
-              SK
+          <div className="flex flex-col lg:flex-row gap-6 items-start justify-between">
+            <div className="flex flex-col lg:flex-row gap-6 items-start flex-1">
+              {/* Avatar */}
+              <div className="w-32 h-32 bg-gradient-to-br from-orange-500 to-orange-700 rounded-lg flex items-center justify-center text-4xl font-bold text-white">
+                {profile.name ? profile.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : 'SK'}
+              </div>
+
+              {/* Profile Info */}
+              <div className="flex-1 space-y-4">
+                <div>
+                  <h1 className="text-3xl font-bold text-white tracking-wider">{profile.name}</h1>
+                  <p className="text-lg text-orange-500 mt-1">{profile.title}</p>
+                </div>
+
+                <p className="text-neutral-300 leading-relaxed">{profile.summary}</p>
+
+                {/* Contact Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  {profile.location && (
+                    <div className="flex items-center gap-2 text-neutral-400">
+                      <MapPin className="w-4 h-4 text-orange-500" />
+                      <span>{profile.location}</span>
+                    </div>
+                  )}
+                  {profile.email && (
+                    <div className="flex items-center gap-2 text-neutral-400">
+                      <Mail className="w-4 h-4 text-orange-500" />
+                      <span>{profile.email}</span>
+                    </div>
+                  )}
+                  {profile.phone && (
+                    <div className="flex items-center gap-2 text-neutral-400">
+                      <Phone className="w-4 h-4 text-orange-500" />
+                      <span>{profile.phone}</span>
+                    </div>
+                  )}
+                  {profile.website && (
+                    <div className="flex items-center gap-2 text-neutral-400">
+                      <Globe className="w-4 h-4 text-orange-500" />
+                      <span>{profile.website}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Social Links */}
+                <div className="flex flex-wrap gap-3">
+                  {profile.linkedin && (
+                    <Button
+                      className="bg-orange-500 hover:bg-orange-600 text-white"
+                      onClick={() => window.open(`https://${profile.linkedin}`, "_blank")}
+                    >
+                      <Linkedin className="w-4 h-4 mr-2" />
+                      LinkedIn
+                    </Button>
+                  )}
+                  {profile.github && (
+                    <Button
+                      className="bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700"
+                      onClick={() => window.open(`https://${profile.github}`, "_blank")}
+                    >
+                      <Github className="w-4 h-4 mr-2" />
+                      GitHub
+                    </Button>
+                  )}
+                  {profile.website && (
+                    <Button
+                      className="bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700"
+                      onClick={() => window.open(`https://${profile.website}`, "_blank")}
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Portfolio
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
 
-            {/* Profile Info */}
-            <div className="flex-1 space-y-4">
-              <div>
-                <h1 className="text-3xl font-bold text-white tracking-wider">{profile.name}</h1>
-                <p className="text-lg text-orange-500 mt-1">{profile.title}</p>
-              </div>
-
-              <p className="text-neutral-300 leading-relaxed">{profile.summary}</p>
-
-              {/* Contact Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                {profile.location && (
-                  <div className="flex items-center gap-2 text-neutral-400">
-                    <MapPin className="w-4 h-4 text-orange-500" />
-                    <span>{profile.location}</span>
-                  </div>
-                )}
-                {profile.email && (
-                  <div className="flex items-center gap-2 text-neutral-400">
-                    <Mail className="w-4 h-4 text-orange-500" />
-                    <span>{profile.email}</span>
-                  </div>
-                )}
-                {profile.phone && (
-                  <div className="flex items-center gap-2 text-neutral-400">
-                    <Phone className="w-4 h-4 text-orange-500" />
-                    <span>{profile.phone}</span>
-                  </div>
-                )}
-                {profile.website && (
-                  <div className="flex items-center gap-2 text-neutral-400">
-                    <Globe className="w-4 h-4 text-orange-500" />
-                    <span>{profile.website}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Social Links */}
-              <div className="flex flex-wrap gap-3">
-                {profile.linkedin && (
-                  <Button
-                    className="bg-orange-500 hover:bg-orange-600 text-white"
-                    onClick={() => window.open(`https://${profile.linkedin}`, "_blank")}
-                  >
-                    <Linkedin className="w-4 h-4 mr-2" />
-                    LinkedIn
-                  </Button>
-                )}
-                {profile.github && (
-                  <Button
-                    className="bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700"
-                    onClick={() => window.open(`https://${profile.github}`, "_blank")}
-                  >
-                    <Github className="w-4 h-4 mr-2" />
-                    GitHub
-                  </Button>
-                )}
-                {profile.website && (
-                  <Button
-                    className="bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700"
-                    onClick={() => window.open(`https://${profile.website}`, "_blank")}
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Portfolio
-                  </Button>
-                )}
-              </div>
+            {/* Upload New Resume Button */}
+            <div className="flex items-center">
+              <Button
+                onClick={handleResetData}
+                variant="outline"
+                className="border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Upload New Resume
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -258,7 +317,7 @@ export default function UserProfilePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {experiences.map((exp, index) => (
+                {experiences.map((exp: any, index: number) => (
                   <div key={index} className="relative pl-8 pb-6 border-l-2 border-neutral-700 last:pb-0">
                     <div className="absolute -left-2 top-0 w-4 h-4 bg-orange-500 rounded-full" />
                     <div className="space-y-3">
@@ -277,7 +336,7 @@ export default function UserProfilePage() {
                         </div>
                       </div>
                       <ul className="space-y-2 text-sm text-neutral-300">
-                        {exp.description.map((item, i) => (
+                        {exp.description.map((item: string, i: number) => (
                           <li key={i} className="flex items-start gap-2">
                             <span className="text-orange-500 mt-1">▹</span>
                             <span>{item}</span>
@@ -300,7 +359,7 @@ export default function UserProfilePage() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {skills.map((skill, index) => (
+                {skills.map((skill: string, index: number) => (
                   <Badge
                     key={index}
                     className="bg-neutral-800 text-white border border-neutral-700 hover:bg-neutral-700 transition-colors px-3 py-1.5"
@@ -326,7 +385,7 @@ export default function UserProfilePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {education.map((edu, index) => (
+                {education.map((edu: any, index: number) => (
                   <div key={index} className="space-y-2">
                     <h3 className="text-lg font-bold text-white">{edu.degree}</h3>
                     <p className="text-orange-500 font-medium">{edu.school}</p>
@@ -358,7 +417,7 @@ export default function UserProfilePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {certifications.map((cert, index) => (
+                {certifications.map((cert: any, index: number) => (
                   <div key={index} className="p-4 bg-neutral-800 border border-neutral-700 rounded-lg">
                     <h3 className="text-sm font-bold text-white">{cert.name}</h3>
                     <p className="text-xs text-orange-500 mt-1">{cert.issuer}</p>
@@ -381,12 +440,12 @@ export default function UserProfilePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {projects.map((project, index) => (
+                {projects.map((project: any, index: number) => (
                   <div key={index} className="p-4 bg-neutral-800 border border-neutral-700 rounded-lg space-y-3">
                     <h3 className="text-base font-bold text-white">{project.name}</h3>
                     <p className="text-sm text-neutral-300">{project.description}</p>
                     <div className="flex flex-wrap gap-2">
-                      {project.tech.map((tech, i) => (
+                      {project.tech.map((tech: string, i: number) => (
                         <Badge key={i} className="bg-orange-500/20 text-orange-500 text-xs">
                           {tech}
                         </Badge>
@@ -404,7 +463,6 @@ export default function UserProfilePage() {
           </Card>
         </div>
       </div>
-
       {/* Download Resume Button */}
       <div className="flex justify-center pt-4">
         <Button className="bg-orange-500 hover:bg-orange-600 text-white text-lg px-8 py-6">
