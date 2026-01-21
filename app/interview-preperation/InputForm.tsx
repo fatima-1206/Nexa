@@ -12,13 +12,15 @@ interface InputFormProps {
   }) => void;
 }
 
+// ...existing code...
 export default function InputForm({ onSubmit = () => {} }: InputFormProps) {
-  const [formData, setFormData] = useState({
-    skills: '',
-    role: '',
-    company: '',
-    experience: '',
-  });
+    const [formData, setFormData] = useState({
+      skills: 'JavaScript, React, Node.js',
+      role: 'Frontend Developer',
+      company: 'Google',
+      experience: '3',
+    });
+  // ...existing code...
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

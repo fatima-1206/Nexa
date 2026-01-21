@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, ChevronLeft } from 'lucide-react';
+import { Send, ChevronLeft, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ChatInterfaceProps {
@@ -35,6 +35,7 @@ export default function ChatInterface({
   ]);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fullScreen, setFullScreen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -77,7 +78,23 @@ export default function ChatInterface({
   };
 
   return (
-    <div className="flex gap-6 h-screen max-h-[calc(100vh-200px)] bg-neutral-900 rounded-lg border border-neutral-700 overflow-hidden">
+    <div
+      className={`flex gap-6 ${
+        fullScreen
+          ? 'fixed inset-0 z-50 bg-neutral-900'
+          : 'h-screen max-h-[calc(100vh-200px)]'
+      } bg-neutral-900 rounded-lg border border-neutral-700 overflow-hidden transition-all duration-300`}
+    >
+      {/* Full Screen Toggle Button */}
+      <button
+        onClick={() => setFullScreen((v) => !v)}
+        className="absolute top-4 right-4 z-50 bg-neutral-800 border border-neutral-700 rounded-full p-2 hover:bg-orange-500/20 transition-colors"
+        aria-label={fullScreen ? 'Exit Full Screen' : 'Full Screen'}
+        type="button"
+      >
+        {fullScreen ? <Minimize2 className="w-5 h-5 text-orange-500" /> : <Maximize2 className="w-5 h-5 text-orange-500" />}
+      </button>
+
       {/* Sources Sidebar */}
       <div className="w-80 border-r border-neutral-700 bg-neutral-900 flex flex-col">
         <div className="p-4 border-b border-neutral-700">
