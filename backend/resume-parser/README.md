@@ -19,6 +19,9 @@ A TypeScript-based resume parser that uses GPT-4o via GitHub's inference API to 
 npm install
 # or
 pnpm install
+
+npm install @tavily/core
+npm install groq-sdk
 ```
 
 ### 2. Configure GitHub Token
