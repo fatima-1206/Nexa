@@ -1,13 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronRight, Monitor, Settings, Shield, Target, Users, Bell, RefreshCw } from "lucide-react"
+import { ChevronRight, Monitor, Settings, Shield, Target, Users, Bell, RefreshCw, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import CommandCenterPage from "./command-center/page"
 import AgentNetworkPage from "./agent-network/page"
 import OperationsPage from "./operations/page"
 import IntelligencePage from "./intelligence/page"
-import SystemsPage from "./systems/page"
+import SystemsPage from "./userProfile/page"
+import UserProfilePage from "./userProfile/page"
 
 export default function TacticalDashboard() {
   const [activeSection, setActiveSection] = useState("overview")
@@ -43,7 +44,7 @@ export default function TacticalDashboard() {
               { id: "agents", icon: Users, label: "AGENT NETWORK" },
               { id: "operations", icon: Target, label: "OPERATIONS" },
               { id: "intelligence", icon: Shield, label: "INTELLIGENCE" },
-              { id: "systems", icon: Settings, label: "SYSTEMS" },
+              { id: "user profile", icon: User, label: "USER PROFILE" },
             ].map((item) => (
               <button
                 key={item.id}
@@ -107,7 +108,7 @@ export default function TacticalDashboard() {
           {activeSection === "agents" && <AgentNetworkPage />}
           {activeSection === "operations" && <OperationsPage />}
           {activeSection === "intelligence" && <IntelligencePage />}
-          {activeSection === "systems" && <SystemsPage />}
+          {activeSection === "user profile" && <UserProfilePage />}
         </div>
       </div>
     </div>
