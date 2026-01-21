@@ -55,3 +55,9 @@ coverage/
 dist/
 
 output.txt
+node_modules/
+dist/
+*.log
+.env
+.env.local
+backend/resume-parser/parsed-resume.json
