@@ -25,3 +25,39 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+
+
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.suo
+*.user
+*.sln
+*.sln.docstates
+
+# caches & coverage
+.cache/
+coverage/
+.parcel-cache/
+.eslintcache
+
+# Yarn Plug'n'Play
+.pnp/
+.pnp.js
+
+# build outputs (additional)
+dist/
+
+output.txt
+node_modules/
+dist/
+*.log
+.env
+.env.local
+backend/resume-parser/parsed-resume.json

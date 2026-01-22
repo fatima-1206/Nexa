@@ -9,6 +9,7 @@ import OperationsPage from "./operations/page"
 import IntelligencePage from "./jobsFound/page"
 // import SystemsPage from "./userProfile/page"
 import UserProfilePage from "./userProfile/page"
+import InterviewPreparationPage from "./interview-preperation/page"
 
 export default function TacticalDashboard() {
   const [activeSection, setActiveSection] = useState("overview")
@@ -76,6 +77,7 @@ export default function TacticalDashboard() {
               { id: "operations", icon: Target, label: "OPERATIONS" },
               { id: "jobsFound", icon: Briefcase, label: "JOBS" },
               { id: "user profile", icon: User, label: "USER PROFILE" },
+              { id: "interview preparation", icon: Settings, label: "INTERVIEW PREPARATION" },
             ].map((item) => (
               <button
                 key={item.id}
@@ -140,6 +142,7 @@ export default function TacticalDashboard() {
           {activeSection === "operations" && <OperationsPage />}
           {activeSection === "jobsFound" && <IntelligencePage />}
           {activeSection === "user profile" && <UserProfilePage />}
+          {activeSection === "interview preparation" && <InterviewPreparationPage />}
         </div>
       </div>
     </div>

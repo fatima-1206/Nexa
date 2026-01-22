@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Geist_Mono as GeistMono } from "next/font/google"
+// @ts-ignore TS(7016): Could not find a declaration file for module './globals.css'.
 import "./globals.css"
 
 const geistMono = GeistMono({ subsets: ["latin"] })
