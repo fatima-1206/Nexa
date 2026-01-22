@@ -117,8 +117,10 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sources: selected }),
     });
-    // make it start scraping but don't block ui
-    fetch('api/scrape-sources', {
+    
+    console.log("DEBUG: Sending request to build vector DB");
+
+    fetch('api/build-vector-db', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sources: selected }),
