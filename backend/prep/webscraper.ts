@@ -5,7 +5,7 @@ import * as cheerio from 'cheerio';
 // @ts-ignore
 import UserAgent from 'user-agents';
 
-async function scrapeSources(sources: any[]): Promise<{ title: string, url: string, text: string }[]> {
+export async function scrapeSources(sources: any[]): Promise<{ title: string, url: string, text: string }[]> {
   const outputDir = './scraped';
   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
 

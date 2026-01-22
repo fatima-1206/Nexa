@@ -117,6 +117,12 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sources: selected }),
     });
+    // make it start scraping but don't block ui
+    fetch('api/scrape-sources', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sources: selected }),
+    });
     onComplete(selected);
   };
 
