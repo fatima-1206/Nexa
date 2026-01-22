@@ -18,16 +18,28 @@ interface SourceSearchProps {
   onBack: () => void;
 }
 
+const LOCAL_STORAGE_KEY = 'selectedSources';
+
 export default function SourceSearch({ interviewData, onComplete, onBack }: SourceSearchProps) {
   const [sources, setSources] = useState<any[]>([]);
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
   const [customLink, setCustomLink] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // Load selected sources from localStorage on mount
   useEffect(() => {
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (saved) {
+      setSelectedSources(new Set(JSON.parse(saved)));
+    }
     searchSources();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Save selected sources to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(Array.from(selectedSources)));
+  }, [selectedSources]);
 
   const searchSources = async () => {
     setLoading(true);
@@ -97,8 +109,14 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
     setSelectedSources(newSelected);
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     const selected = sources.filter(s => selectedSources.has(s.id));
+    // Save to backend for RAG
+    await fetch('/api/save-selected-sources', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sources: selected }),
+    });
     onComplete(selected);
   };
 

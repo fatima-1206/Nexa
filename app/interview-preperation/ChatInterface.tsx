@@ -108,18 +108,16 @@ export default function ChatInterface({
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {sources.map((source) => (
+          {sources.map((source, idx) => (
             <a
-              key={source.id}
+              key={source.id ?? source.url ?? idx} // fallback to url or index if id is missing
               href={source.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="block p-3 bg-neutral-800 border border-neutral-700 rounded hover:border-orange-500/50 hover:bg-neutral-800/70 transition-all group"
+              className="block p-3 rounded bg-neutral-800 border border-neutral-700 hover:bg-orange-500/10 transition"
             >
-              <p className="text-sm font-semibold text-orange-500 group-hover:text-orange-400 line-clamp-2">
-                {source.title}
-              </p>
-              <p className="text-xs text-neutral-500 mt-1">{source.source}</p>
+              <div className="font-semibold text-orange-400">{source.title}</div>
+              <div className="text-neutral-300 text-xs">{source.description}</div>
             </a>
           ))}
         </div>
