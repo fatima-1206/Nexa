@@ -1,12 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronRight, Monitor, Settings, Shield, Target, Users, Bell, RefreshCw, User } from "lucide-react"
+import { ChevronRight, Monitor, Settings, Shield, Target, Users, Bell, RefreshCw, User,Briefcase } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import CommandCenterPage from "./command-center/page"
 import AgentNetworkPage from "./agent-network/page"
 import OperationsPage from "./operations/page"
-import IntelligencePage from "./intelligence/page"
+import IntelligencePage from "./jobsFound/page"
 // import SystemsPage from "./userProfile/page"
 import UserProfilePage from "./userProfile/page"
 import InterviewPreparationPage from "./interview-preperation/page"
@@ -14,6 +14,37 @@ import InterviewPreparationPage from "./interview-preperation/page"
 export default function TacticalDashboard() {
   const [activeSection, setActiveSection] = useState("overview")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [currentTime, setCurrentTime] = useState(new Date())
+
+  // Update time every second
+  useState(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+    return () => clearInterval(timer)
+  })
+
+  // Get page label based on active section
+  const getPageLabel = () => {
+    const labels: Record<string, string> = {
+      overview: "COMMAND CENTER",
+      agents: "AGENT NETWORK",
+      operations: "OPERATIONS",
+      jobsFound: "JOBS",
+      "user profile": "USER PROFILE"
+    }
+    return labels[activeSection] || "OVERVIEW"
+  }
+
+  // Format current date and time
+  const formatDateTime = () => {
+    const month = String(currentTime.getMonth() + 1).padStart(2, '0')
+    const day = String(currentTime.getDate()).padStart(2, '0')
+    const year = currentTime.getFullYear()
+    const hours = String(currentTime.getHours()).padStart(2, '0')
+    const minutes = String(currentTime.getMinutes()).padStart(2, '0')
+    return `${month}/${day}/${year} ${hours}:${minutes} UTC`
+  }
 
   return (
     <div className="flex h-screen">
@@ -24,8 +55,8 @@ export default function TacticalDashboard() {
         <div className="p-4">
           <div className="flex items-center justify-between mb-8">
             <div className={`${sidebarCollapsed ? "hidden" : "block"}`}>
-              <h1 className="text-orange-500 font-bold text-lg tracking-wider">TACTICAL OPS</h1>
-              <p className="text-neutral-500 text-xs">v2.1.7 CLASSIFIED</p>
+              <h1 className="text-orange-500 font-bold text-lg tracking-wider">AI INTERVIEW PREP</h1>
+              <p className="text-neutral-500 text-xs">Streamline your learning</p>
             </div>
             <Button
               variant="ghost"
@@ -44,7 +75,7 @@ export default function TacticalDashboard() {
               { id: "overview", icon: Monitor, label: "COMMAND CENTER" },
               { id: "agents", icon: Users, label: "AGENT NETWORK" },
               { id: "operations", icon: Target, label: "OPERATIONS" },
-              { id: "intelligence", icon: Shield, label: "INTELLIGENCE" },
+              { id: "jobsFound", icon: Briefcase, label: "JOBS" },
               { id: "user profile", icon: User, label: "USER PROFILE" },
               { id: "interview preparation", icon: Settings, label: "INTERVIEW PREPARATION" },
             ].map((item) => (
@@ -90,11 +121,11 @@ export default function TacticalDashboard() {
         <div className="h-16 bg-neutral-800 border-b border-neutral-700 flex items-center justify-between px-6">
           <div className="flex items-center gap-4">
             <div className="text-sm text-neutral-400">
-              TACTICAL COMMAND / <span className="text-orange-500">OVERVIEW</span>
+              DASHBOARD / <span className="text-orange-500">{getPageLabel()}</span>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="text-xs text-neutral-500">LAST UPDATE: 05/06/2025 20:00 UTC</div>
+            <div className="text-xs text-neutral-500">LAST UPDATE: {formatDateTime()}</div>
             <Button variant="ghost" size="icon" className="text-neutral-400 hover:text-orange-500">
               <Bell className="w-4 h-4" />
             </Button>
@@ -109,7 +140,7 @@ export default function TacticalDashboard() {
           {activeSection === "overview" && <CommandCenterPage />}
           {activeSection === "agents" && <AgentNetworkPage />}
           {activeSection === "operations" && <OperationsPage />}
-          {activeSection === "intelligence" && <IntelligencePage />}
+          {activeSection === "jobsFound" && <IntelligencePage />}
           {activeSection === "user profile" && <UserProfilePage />}
           {activeSection === "interview preparation" && <InterviewPreparationPage />}
         </div>
