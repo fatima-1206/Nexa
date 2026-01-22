@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
+    console.log("Converting file to buffer")
     // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
     // Save PDF to temporary location
     const tempFilePath = join(tmpdir(), `resume-${Date.now()}.pdf`);
     await writeFile(tempFilePath, buffer);
+    console.log("About to use github token")
 
     try {
       // Get GitHub token from environment
