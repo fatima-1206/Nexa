@@ -169,7 +169,9 @@ function hardFilterSources(sources: any[]): any[] {
         "instagram.com",
         "twitter.com",
         "tiktok.com",
-        "ads.example.com"
+        "ads.example.com",
+        "youtube.com",
+        "medium.com"
     ];
 
     const seoBadwords = [
