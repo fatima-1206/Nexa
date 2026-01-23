@@ -61,3 +61,9 @@ dist/
 .env
 .env.local
 backend/resume-parser/parsed-resume.json
+
+backend/prep/selectedSources.json
+scraped/
+backend/scraped/
+summaries/
+chunks/
