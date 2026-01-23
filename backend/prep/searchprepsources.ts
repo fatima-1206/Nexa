@@ -229,7 +229,7 @@ export async function searchForInterviewPrep(
 
     console.log("🧹 Step 3: Hard filtering sources...");
     const filteredResults = hardFilterSources(rawResults);
-
+    console.log("Number of sources found: ", filteredResults.length);
     // Construct the final output
     const output: SearchOutput = {
         curatedSources: filteredResults,

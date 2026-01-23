@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import SourceCard from './SourceCard';
-import { Search, Plus, Check, Loader } from 'lucide-react';
+import { Search, Plus, Check, Loader, ChevronLeft, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface SourceSearchProps {
@@ -19,6 +19,7 @@ interface SourceSearchProps {
 }
 
 const LOCAL_STORAGE_KEY = 'selectedSources';
+const SEARCH_TIMEOUT = 15000; // 15 seconds timeout
 
 export default function SourceSearch({ interviewData, onComplete, onBack }: SourceSearchProps) {
   const [sources, setSources] = useState<any[]>([]);
@@ -27,6 +28,7 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
   const [loading, setLoading] = useState(true);
   const [building, setBuilding] = useState(false);
   const [buildProgress, setBuildProgress] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   // Load selected sources from localStorage on mount
   useEffect(() => {
@@ -45,6 +47,13 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
 
   const searchSources = async () => {
     setLoading(true);
+    setError(null);
+
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setError('The search request timed out. Please try again.');
+    }, SEARCH_TIMEOUT);
+
     try {
       // Prepare the payload for your API
       const payload = {
@@ -61,8 +70,14 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
+      clearTimeout(timeoutId); // Clear the timeout if the request succeeds
+      
+      if (!res.ok) {
+        throw new Error(`Failed to fetch sources: ${res.statusText}`);
+      }
+      
       const data = await res.json();
+      console.log('API Response:', data);
 
       if (data.success && data.data && data.data.curatedSources) {
         // Ensure unique keys by combining url and index
@@ -75,13 +90,16 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
           relevance: src.credibilityScore || 80,
         }));
         setSources(mappedSources);
+        console.log('Mapped Sources:', mappedSources);
       } else {
         setSources([]);
       }
     } catch (error) {
       console.error('Error searching sources:', error);
+      setError('Failed to fetch sources. Please try again.');
       setSources([]);
     } finally {
+      clearTimeout(timeoutId); // Ensure timeout is cleared
       setLoading(false);
     }
   };
@@ -163,14 +181,12 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
   return (
     <div className="space-y-6">
       <div className="flex gap-4">
-        <Button
+        <button
           onClick={onBack}
-          disabled={building}
-          variant="outline"
-          className="border-neutral-700 text-neutral-400 hover:bg-neutral-800 disabled:opacity-50"
+          className="flex items-center gap-2 text-orange-500 hover:text-orange-400 transition-colors"
         >
-          Back
-        </Button>
+          <ChevronLeft className="w-4 h-4" /> Back
+        </button>
       </div>
 
       <div className="bg-neutral-900 border border-neutral-700 rounded-lg p-6 backdrop-blur-sm">
@@ -182,6 +198,16 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
               <Search className="w-8 h-8 text-orange-500" />
             </div>
             <p className="text-neutral-400 mt-4">Searching for relevant resources...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-red-500 mb-4">{error}</p>
+            <Button
+              onClick={searchSources}
+              className="px-6 bg-orange-500 hover:bg-orange-600 text-white rounded flex items-center gap-2 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" /> Retry
+            </Button>
           </div>
         ) : (
           <div className="grid gap-4 mb-6">
@@ -195,7 +221,11 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
             ))}
           </div>
         )}
-
+        {!loading && !error && sources.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-neutral-400">No sources found. Please try again later.</p>
+          </div>
+        )}
         <div className="border-t border-neutral-700 pt-6">
           <h3 className="text-lg font-semibold text-orange-500 mb-4">Add Custom Resource</h3>
           <div className="flex gap-2">

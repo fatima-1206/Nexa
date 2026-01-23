@@ -8,30 +8,24 @@ export interface RetrievalResult {
 }
 
 /**
- * Retrieve relevant chunks from the vector store based on user topics
+ * Retrieve relevant chunks from the vector store based on user message
  */
 export async function retrieveRelevantChunks(
   vectorStore: MemoryVectorStore,
-  topics: string[],
+  userMessage: string,
   topK: number = 5
 ): Promise<RetrievalResult[]> {
-  const results: RetrievalResult[] = [];
+  // Embed the entire user message as a single query
+  const queryEmbedding = await embed(userMessage);
+  
+  // Search for similar chunks
+  const relevantChunks = vectorStore.search(queryEmbedding, topK);
 
-  for (const topic of topics) {
-    // Embed the topic/query
-    const queryEmbedding = await embed(topic);
-    
-    // Search for similar chunks
-    const relevantChunks = vectorStore.search(queryEmbedding, topK);
-
-    results.push({
-      topic,
-      chunks: relevantChunks.map(chunk => chunk.content),
-      metadata: relevantChunks.map(chunk => chunk.metadata)
-    });
-  }
-
-  return results;
+  return [{
+    topic: "search_results",
+    chunks: relevantChunks.map(chunk => chunk.content),
+    metadata: relevantChunks.map(chunk => chunk.metadata)
+  }];
 }
 
 /**
