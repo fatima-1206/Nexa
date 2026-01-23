@@ -221,7 +221,7 @@ export async function searchForInterviewPrep(
 
     // Log the search queries
     console.log("\n🔎 Generated Search Queries:");
-    // console.log(JSON.stringify(skillQueries, null, 2));
+    console.log(JSON.stringify(skillQueries, null, 2));
     // write them to output.txt
     fs.writeFileSync('output.txt', JSON.stringify(skillQueries, null, 2));
 
