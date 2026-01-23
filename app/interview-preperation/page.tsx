@@ -10,6 +10,7 @@ type PageStep = 'input' | 'sources' | 'chat';
 const LOCAL_STORAGE_KEY = 'selectedSources';
 const LOCAL_STORAGE_SOURCES_KEY = 'persistedSources';
 const LOCAL_STORAGE_EMBEDDINGS_KEY = 'embeddingsData';
+const LOCAL_STORAGE_INTERVIEW_DATA_KEY = 'interviewData';
 
 export default function InterviewPreparationPage() {
   const [step, setStep] = useState<PageStep>('input');
@@ -26,6 +27,7 @@ export default function InterviewPreparationPage() {
   useEffect(() => {
     const savedSelected = localStorage.getItem(LOCAL_STORAGE_KEY);
     const savedEmbeddings = localStorage.getItem(LOCAL_STORAGE_EMBEDDINGS_KEY);
+    const savedInterviewData = localStorage.getItem(LOCAL_STORAGE_INTERVIEW_DATA_KEY);
 
     async function fetchSelectedSources() {
       try {
@@ -52,14 +54,23 @@ export default function InterviewPreparationPage() {
       setStep('input');
     }
 
-    if (savedSelected && savedEmbeddings) {
+    if (savedSelected && savedEmbeddings && savedInterviewData) {
       try {
         const parsed = JSON.parse(savedSelected);
         const embeddingsParsed = JSON.parse(savedEmbeddings);
+        const interviewDataParsed = JSON.parse(savedInterviewData);
         
-        if (Array.isArray(parsed) && parsed.length > 0 && embeddingsParsed) {
+        if (
+          Array.isArray(parsed) && 
+          parsed.length > 0 && 
+          embeddingsParsed &&
+          interviewDataParsed &&
+          interviewDataParsed.role &&
+          interviewDataParsed.company
+        ) {
           setSelectedSources(parsed);
           setEmbeddingsData(embeddingsParsed);
+          setInterviewData(interviewDataParsed);
           setStep('chat');
           setLoading(false);
           return;
@@ -88,6 +99,7 @@ export default function InterviewPreparationPage() {
 
   const handleInputSubmit = (data: typeof interviewData) => {
     setInterviewData(data);
+    localStorage.setItem(LOCAL_STORAGE_INTERVIEW_DATA_KEY, JSON.stringify(data));
     setStep('sources');
   };
 
@@ -133,7 +145,7 @@ export default function InterviewPreparationPage() {
           />
         )}
 
-        {step === 'chat' && embeddingsData && (
+        {step === 'chat' && embeddingsData && interviewData.role && (
           <ChatInterface
             interviewData={interviewData}
             sources={selectedSources}
