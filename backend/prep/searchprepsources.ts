@@ -169,7 +169,9 @@ function hardFilterSources(sources: any[]): any[] {
         "instagram.com",
         "twitter.com",
         "tiktok.com",
-        "ads.example.com"
+        "ads.example.com",
+        "youtube.com",
+        "medium.com"
     ];
 
     const seoBadwords = [
@@ -219,7 +221,7 @@ export async function searchForInterviewPrep(
 
     // Log the search queries
     console.log("\n🔎 Generated Search Queries:");
-    // console.log(JSON.stringify(skillQueries, null, 2));
+    console.log(JSON.stringify(skillQueries, null, 2));
     // write them to output.txt
     fs.writeFileSync('output.txt', JSON.stringify(skillQueries, null, 2));
 
@@ -229,7 +231,7 @@ export async function searchForInterviewPrep(
 
     console.log("🧹 Step 3: Hard filtering sources...");
     const filteredResults = hardFilterSources(rawResults);
-
+    console.log("Number of sources found: ", filteredResults.length);
     // Construct the final output
     const output: SearchOutput = {
         curatedSources: filteredResults,

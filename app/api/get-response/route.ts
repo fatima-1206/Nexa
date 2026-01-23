@@ -19,7 +19,6 @@ let globalVectorStore: MemoryVectorStore | null = null;
 
 interface RequestBody {
   mode: "prepare" | "chat" | "debug";
-  topics?: string[];
   message?: string;
   embeddingsData?: string;
   conversationHistory?: Array<{ role: string; content: string }>;
@@ -71,37 +70,35 @@ async function handleDebugMode(vectorStore: MemoryVectorStore) {
     );
   }
 }
-
 /**
- * Handle preparation mode - generate explanations for topics
+ * Handle preparation mode - generate explanations for the entire message
  */
 async function handlePrepareMode(
-  topics: string[],
+  message: string,
   vectorStore: MemoryVectorStore
 ) {
   try {
-    console.log("🔍 Prepare mode - Topics requested:", topics);
+    console.log("🔍 Prepare mode - Message received:", message);
 
-    // Retrieve relevant chunks for each topic
-    const retrievalResults = await retrieveRelevantChunks(vectorStore, topics);
+    // Retrieve relevant chunks using the entire message
+    const retrievalResults = await retrieveRelevantChunks(vectorStore, message);
     console.log("✅ Retrieved results:", {
-      topicsRequested: topics.length,
       resultsReturned: retrievalResults.length,
       details: retrievalResults.map((r) => ({
-        topic: r.topic,
         chunksFound: r.chunks.length,
         firstChunkPreview: r.chunks[0]?.substring(0, 100) || "No chunks",
+        secondChunkPreview: r.chunks[1]?.substring(0, 100) || "No chunks",
+
       })),
     });
 
     if (retrievalResults.length === 0 || retrievalResults.every(r => r.chunks.length === 0)) {
-      console.warn("⚠️  No chunks retrieved for topics:", topics);
+      console.warn("⚠️  No chunks retrieved for the message:", message);
       return NextResponse.json(
         {
           success: false,
-          error: "No relevant content found for the requested topics. Try different keywords.",
+          error: "No relevant content found for the provided message.",
           debug: {
-            topicsSearched: topics,
             vectorStoreSize: vectorStore.embeddings.length,
           },
         },
@@ -111,7 +108,7 @@ async function handlePrepareMode(
 
     // Generate preparation content
     const preparations = await generatePreparation(retrievalResults);
-    console.log("✅ Generated preparations for", preparations.length, "topics");
+    console.log("✅ Generated preparations for", preparations.length, "chunks");
 
     // Format for frontend
     const formattedData = formatPreparationForFrontend(preparations);
@@ -122,7 +119,6 @@ async function handlePrepareMode(
         mode: "prepare",
         data: formattedData,
         debug: {
-          topicsProcessed: topics,
           chunksRetrieved: retrievalResults.reduce((sum, r) => sum + r.chunks.length, 0),
         },
       },
@@ -152,24 +148,19 @@ async function handleChatMode(
   try {
     console.log("💬 Chat mode - User message:", message);
 
-    // Extract topics from user message for retrieval
-    const topicsToRetrieve = extractTopics(message);
-    console.log("🔎 Extracted topics:", topicsToRetrieve.length > 0 ? topicsToRetrieve : "['general']");
-
-    // Retrieve relevant chunks
+    // Retrieve relevant chunks using the full message
     const retrievalResults = await retrieveRelevantChunks(
       vectorStore,
-      topicsToRetrieve.length > 0 ? topicsToRetrieve : ["general"]
+      message
     );
 
     console.log("📚 Retrieval results:", {
-      topicsSearched: topicsToRetrieve.length > 0 ? topicsToRetrieve : ["general"],
       resultsFound: retrievalResults.length,
       chunksPerTopic: retrievalResults.map((r) => ({
-        topic: r.topic,
         chunks: r.chunks.length,
       })),
-      firstChunkPreview: retrievalResults[0]?.chunks[0]?.substring(0, 150) || "No chunks",
+      firstChunkPreview: retrievalResults[0]?.chunks[0]?.substring(0, 100) || "No chunks",
+      secondChunkPreview: retrievalResults[0]?.chunks[1]?.substring(0, 100) || "No chunks",
     });
 
     // Build context from retrieved chunks
@@ -219,11 +210,9 @@ Use this information to provide accurate, helpful answers to interview preparati
         mode: "chat",
         response: assistantResponse,
         sources: retrievalResults.map((r) => ({
-          topic: r.topic,
           chunkCount: r.chunks.length,
         })),
         debug: {
-          topicsExtracted: topicsToRetrieve,
           contextLength: context.length,
           messagesSentToLLM: messages.length,
         },
@@ -244,38 +233,14 @@ Use this information to provide accurate, helpful answers to interview preparati
 }
 
 /**
- * Extract potential topics from user message
- */
-function extractTopics(message: string): string[] {
-  const keywords = [
-    "system design",
-    "database",
-    "api",
-    "algorithms",
-    "data structures",
-    "distributed systems",
-    "scalability",
-    "optimization",
-    "testing",
-    "architecture",
-  ];
-
-  const foundTopics = keywords.filter((keyword) =>
-    message.toLowerCase().includes(keyword)
-  );
-
-  return foundTopics.length > 0 ? foundTopics : [];
-}
-
-/**
  * POST handler
  */
 export async function POST(request: NextRequest) {
   try {
     const body: RequestBody = await request.json();
-    const { mode, topics, message, embeddingsData, conversationHistory } = body;
+    const { mode, message, embeddingsData, conversationHistory } = body;
 
-    console.log("🚀 API request received:", { mode, topics, hasMessage: !!message });
+    console.log("🚀 API request received:", { mode, hasMessage: !!message });
 
     // Validate request
     if (!mode || !["prepare", "chat", "debug"].includes(mode)) {
@@ -314,13 +279,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (mode === "prepare") {
-      if (!topics || topics.length === 0) {
+      if (!message) {
         return NextResponse.json(
-          { success: false, error: "Topics required for prepare mode" },
+          { success: false, error: "Message required for prepare mode" },
           { status: 400 }
         );
       }
-      return await handlePrepareMode(topics, vectorStore);
+      return await handlePrepareMode(message, vectorStore);
     }
 
     if (mode === "chat") {
