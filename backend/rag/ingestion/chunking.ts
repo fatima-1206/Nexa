@@ -184,8 +184,8 @@ function saveChunks(chunks: Chunk[], outputDir: string, topic: string) {
 // Main async function to load summaries, chunk them, and save the results
 (async () => {
   try {
-    const summariesDir = './summaries'; // Directory containing summary JSON files
-    const outputDir = './chunks';       // Directory to save chunk files
+    const summariesDir = path.join(__dirname, 'summaries');
+    const outputDir = path.join(__dirname, 'chunks');       // Directory to save chunk files
 
     const summaries = loadSummaries(summariesDir); // Load all summaries
     let totalChunks = 0; // Track total number of chunks created

@@ -57,9 +57,7 @@ Output the result as a JSON object with the following structure:
       stop: null,
     });
 
-    // If the API returns a single response object:
     const content = completion.choices?.[0]?.message?.content || '';
-
     return JSON.parse(content) as Summary;
   } catch (error: any) {
     console.error('Failed to generate summary:', error.message);
@@ -67,9 +65,11 @@ Output the result as a JSON object with the following structure:
   }
 }
 
-export async function summarizeSources(scrapedData: { title: string, url: string, text: string }[]) {
-  const summariesDir = './summaries';
-  if (!fs.existsSync(summariesDir)) fs.mkdirSync(summariesDir);
+export async function summarizeSources(
+  scrapedData: { title: string; url: string; text: string }[],
+  summariesDir: string
+) {
+  if (!fs.existsSync(summariesDir)) fs.mkdirSync(summariesDir, { recursive: true });
 
   for (const data of scrapedData) {
     try {

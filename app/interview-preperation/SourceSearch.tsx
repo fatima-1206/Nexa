@@ -110,6 +110,7 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
   };
 
   const handleComplete = async () => {
+    console.log("DEBUG: handle complete called");
     const selected = sources.filter(s => selectedSources.has(s.id));
     // Save to backend for RAG
     await fetch('/api/save-selected-sources', {

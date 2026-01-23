@@ -74,10 +74,8 @@
 
 // That’s it. You now have a **knowledge base**.
 
-// ---
 import fetch from 'node-fetch';
 import * as dotenv from 'dotenv';
-import { ChromaClient } from 'chromadb';
 
 dotenv.config();
 
@@ -140,14 +138,57 @@ export async function embedBatch(texts: string[]): Promise<number[][]> {
   throw new Error('Unexpected embedding format from Hugging Face API');
 }
 
-// --- ChromaDB setup ---
-export const chroma = new ChromaClient({
-  path: "http://localhost:8000"
-});
+// --- Client-owned session types ---
+export interface StoredEmbedding {
+  id: string;
+  content: string;
+  embedding: number[];
+  metadata: Record<string, any>;
+}
 
-// --- Collection creation ---
-export async function getOrCreateCollection(name: string) {
-  return await chroma.getOrCreateCollection({ name });
+export interface MemoryVectorStore {
+  embeddings: StoredEmbedding[];
+  addEmbeddings(items: StoredEmbedding[]): void;
+  search(queryEmbedding: number[], topK: number): StoredEmbedding[];
+  toJSON(): string;
+  fromJSON(json: string): void;
+}
+
+// --- Create in-memory vector store ---
+export function createMemoryVectorStore(): MemoryVectorStore {
+  const embeddings: StoredEmbedding[] = [];
+
+  function cosineSimilarity(a: number[], b: number[]): number {
+    const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0);
+    const magnitudeA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
+    const magnitudeB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+    return dotProduct / (magnitudeA * magnitudeB);
+  }
+
+  return {
+    embeddings,
+    addEmbeddings(items: StoredEmbedding[]) {
+      embeddings.push(...items);
+    },
+    search(queryEmbedding: number[], topK: number): StoredEmbedding[] {
+      const scored = embeddings.map(item => ({
+        item,
+        score: cosineSimilarity(queryEmbedding, item.embedding)
+      }));
+      return scored
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topK)
+        .map(s => s.item);
+    },
+    toJSON(): string {
+      return JSON.stringify(embeddings);
+    },
+    fromJSON(json: string): void {
+      const data = JSON.parse(json);
+      embeddings.length = 0;
+      embeddings.push(...data);
+    }
+  };
 }
 
 // --- Example chunking function ---
@@ -162,51 +203,26 @@ function chunkText(text: string, chunkSize = 300): { content: string, metadata: 
   return chunks;
 }
 
-// --- Main ingestion pipeline ---
-export async function ingestTextToChromaDB(text: string, collectionName: string) {
-  const collection = await getOrCreateCollection(collectionName);
+// --- Client-side ingestion (returns serializable data) ---
+export async function prepareChunksForClient(
+  text: string
+): Promise<StoredEmbedding[]> {
   const chunks = chunkText(text);
-
-  for (const chunk of chunks) {
-    const embedding = await embed(chunk.content);
-
-    await collection.add({
-      ids: [crypto.randomUUID()],
-      embeddings: [embedding],
-      documents: [chunk.content],
-      metadatas: [chunk.metadata]
-    });
-  }
-  console.log(`Ingested ${chunks.length} chunks into collection "${collectionName}"`);
-}
-
-// Accepts an array of chunks: [{ content, metadata }]
-export async function ingestChunksToChromaDB(
-  chunks: { content: string, metadata: any }[],
-  collectionName: string
-) {
-  if (chunks.length === 0) return;
-
-  const collection = await getOrCreateCollection(collectionName);
   const texts = chunks.map(c => c.content);
-  const metadatas = chunks.map(c => c.metadata);
-  const ids = chunks.map(() => crypto.randomUUID());
-
   const embeddings = await embedBatch(texts);
 
-  await collection.add({
-    ids,
-    embeddings,
-    documents: texts,
-    metadatas,
-  });
-
-  console.log(`Ingested ${chunks.length} chunks into collection "${collectionName}"`);
+  return chunks.map((chunk, idx) => ({
+    id: crypto.randomUUID(),
+    content: chunk.content,
+    embedding: embeddings[idx],
+    metadata: chunk.metadata
+  }));
 }
 
-// --- Example usage ---
-// (Uncomment to run directly)
-// (async () => {
-//   const text = "Your long document or text goes here...";
-//   await ingestTextToChromaDB(text, "interview-prep");
-// })();
+// --- Send to client to store in IndexedDB/localStorage/React state ---
+export async function ingestTextForClient(text: string): Promise<string> {
+  const prepared = await prepareChunksForClient(text);
+  const store = createMemoryVectorStore();
+  store.addEmbeddings(prepared);
+  return store.toJSON(); // Send this JSON to client
+}
