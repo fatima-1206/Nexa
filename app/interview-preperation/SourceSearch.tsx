@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import SourceCard from './SourceCard';
-import { Search, Plus, Check } from 'lucide-react';
+import { Search, Plus, Check, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface SourceSearchProps {
@@ -14,7 +14,7 @@ interface SourceSearchProps {
     techStack: string[];
     interviewType: string;
   };
-  onComplete: (sources: any[]) => void;
+  onComplete: (sources: any[], embeddingsData: string) => void;
   onBack: () => void;
 }
 
@@ -25,6 +25,8 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
   const [customLink, setCustomLink] = useState('');
   const [loading, setLoading] = useState(true);
+  const [building, setBuilding] = useState(false);
+  const [buildProgress, setBuildProgress] = useState('');
 
   // Load selected sources from localStorage on mount
   useEffect(() => {
@@ -110,23 +112,52 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
   };
 
   const handleComplete = async () => {
-    console.log("DEBUG: handle complete called");
     const selected = sources.filter(s => selectedSources.has(s.id));
-    // Save to backend for RAG
-    await fetch('/api/save-selected-sources', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sources: selected }),
-    });
-    
-    console.log("DEBUG: Sending request to build vector DB");
+    setBuilding(true);
+    setBuildProgress('Saving sources...');
 
-    fetch('api/build-vector-db', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sources: selected }),
-    });
-    onComplete(selected);
+    try {
+      // Step 1: Save sources
+      await fetch('/api/save-selected-sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sources: selected }),
+      });
+
+      setBuildProgress('Building vector database...');
+
+      // Step 2: Build vector DB
+      const response = await fetch('/api/build-vector-db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sources: selected }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Vector DB build failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to build vector database');
+      }
+
+      setBuildProgress('Preparing embeddings...');
+
+      // Extract vector store data
+      const embeddingsData = data.vectorStore;
+
+      setBuildProgress('Done! Redirecting to chat...');
+
+      // Pass embeddingsData to parent
+      onComplete(selected, embeddingsData);
+    } catch (error) {
+      console.error('Error building vector DB:', error);
+      setBuilding(false);
+      setBuildProgress(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setTimeout(() => setBuildProgress(''), 5000);
+    }
   };
 
   return (
@@ -134,8 +165,9 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
       <div className="flex gap-4">
         <Button
           onClick={onBack}
+          disabled={building}
           variant="outline"
-          className="border-neutral-700 text-neutral-400 hover:bg-neutral-800"
+          className="border-neutral-700 text-neutral-400 hover:bg-neutral-800 disabled:opacity-50"
         >
           Back
         </Button>
@@ -173,11 +205,13 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
               value={customLink}
               onChange={(e) => setCustomLink(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAddCustomLink()}
-              className="flex-1 bg-neutral-800 border border-neutral-700 rounded px-4 py-2 text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500"
+              disabled={building}
+              className="flex-1 bg-neutral-800 border border-neutral-700 rounded px-4 py-2 text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500 disabled:opacity-50"
             />
             <Button
               onClick={handleAddCustomLink}
-              className="px-6 bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/50 text-orange-500 rounded flex items-center gap-2 transition-colors"
+              disabled={building}
+              className="px-6 bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/50 text-orange-500 rounded flex items-center gap-2 transition-colors disabled:opacity-50"
             >
               <Plus className="w-4 h-4" /> Add
             </Button>
@@ -185,13 +219,33 @@ export default function SourceSearch({ interviewData, onComplete, onBack }: Sour
         </div>
 
         {selectedSources.size > 0 && (
-          <div className="mt-6 flex justify-end">
-            <Button
-              onClick={handleComplete}
-              className="px-8 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded flex items-center gap-2 transition-all transform hover:scale-105"
-            >
-              <Check className="w-4 h-4" /> Continue with {selectedSources.size} Resource(s)
-            </Button>
+          <div className="mt-6 flex flex-col gap-4">
+            {building && (
+              <div className="bg-neutral-800 border border-orange-500/50 rounded-lg p-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <Loader className="w-5 h-5 text-orange-500 animate-spin" />
+                  <span className="text-orange-500 font-semibold">Building Vector Database...</span>
+                </div>
+                <p className="text-neutral-400 text-sm ml-8">{buildProgress}</p>
+              </div>
+            )}
+            <div className="flex justify-end">
+              <Button
+                onClick={handleComplete}
+                disabled={building}
+                className="px-8 py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded flex items-center gap-2 transition-all transform hover:scale-105"
+              >
+                {building ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" /> Building...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" /> Continue with {selectedSources.size} Resource(s)
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         )}
       </div>

@@ -9,6 +9,7 @@ type PageStep = 'input' | 'sources' | 'chat';
 
 const LOCAL_STORAGE_KEY = 'selectedSources';
 const LOCAL_STORAGE_SOURCES_KEY = 'persistedSources';
+const LOCAL_STORAGE_EMBEDDINGS_KEY = 'embeddingsData';
 
 export default function InterviewPreparationPage() {
   const [step, setStep] = useState<PageStep>('input');
@@ -19,12 +20,12 @@ export default function InterviewPreparationPage() {
     experience: '',
   });
   const [selectedSources, setSelectedSources] = useState<any[]>([]);
+  const [embeddingsData, setEmbeddingsData] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
-  // On mount, check localStorage for persisted sources and selected sources
   useEffect(() => {
     const savedSelected = localStorage.getItem(LOCAL_STORAGE_KEY);
-    const savedSources = localStorage.getItem(LOCAL_STORAGE_SOURCES_KEY);
+    const savedEmbeddings = localStorage.getItem(LOCAL_STORAGE_EMBEDDINGS_KEY);
 
     async function fetchSelectedSources() {
       try {
@@ -32,15 +33,40 @@ export default function InterviewPreparationPage() {
         const data = await res.json();
         if (data.sources && Array.isArray(data.sources) && data.sources.length > 0) {
           setSelectedSources(data.sources);
+          
+          // Try to load embeddings
+          if (data.embeddingsData) {
+            setEmbeddingsData(data.embeddingsData);
+            setStep('chat');
+          } else {
+            setStep('sources');
+          }
+          
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.error('Error fetching selected sources:', e);
+      }
+      setLoading(false);
+      setStep('input');
+    }
+
+    if (savedSelected && savedEmbeddings) {
+      try {
+        const parsed = JSON.parse(savedSelected);
+        const embeddingsParsed = JSON.parse(savedEmbeddings);
+        
+        if (Array.isArray(parsed) && parsed.length > 0 && embeddingsParsed) {
+          setSelectedSources(parsed);
+          setEmbeddingsData(embeddingsParsed);
           setStep('chat');
           setLoading(false);
           return;
         }
       } catch (e) {
-        // handle error if needed
+        console.error('Error parsing saved data:', e);
       }
-      setLoading(false);
-      setStep('input');
     }
 
     if (savedSelected) {
@@ -48,28 +74,16 @@ export default function InterviewPreparationPage() {
         const parsed = JSON.parse(savedSelected);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setSelectedSources(parsed);
-          setStep('chat');
-          setLoading(false);
-          return;
-        }
-      } catch {}
-    } else {
-      fetchSelectedSources();
-      return;
-    }
-
-    if (savedSources) {
-      try {
-        const parsed = JSON.parse(savedSources);
-        if (Array.isArray(parsed) && parsed.length > 0) {
           setStep('sources');
           setLoading(false);
           return;
         }
-      } catch {}
+      } catch (e) {
+        console.error('Error parsing saved sources:', e);
+      }
     }
-    setStep('input');
-    setLoading(false);
+
+    fetchSelectedSources();
   }, []);
 
   const handleInputSubmit = (data: typeof interviewData) => {
@@ -77,18 +91,20 @@ export default function InterviewPreparationPage() {
     setStep('sources');
   };
 
-  // When sources are selected, persist them
-  const handleSourcesComplete = (sources: any[]) => {
+  const handleSourcesComplete = (sources: any[], newEmbeddingsData: string) => {
     setSelectedSources(sources);
+    setEmbeddingsData(newEmbeddingsData);
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sources));
+    localStorage.setItem(LOCAL_STORAGE_EMBEDDINGS_KEY, JSON.stringify(newEmbeddingsData));
     setStep('chat');
   };
 
-  // When going back to sources, clear selected sources
   const handleBackToSources = () => {
     setStep('sources');
     setSelectedSources([]);
+    setEmbeddingsData('');
     localStorage.removeItem(LOCAL_STORAGE_KEY);
+    localStorage.removeItem(LOCAL_STORAGE_EMBEDDINGS_KEY);
   };
 
   if (loading) {
@@ -117,10 +133,11 @@ export default function InterviewPreparationPage() {
           />
         )}
 
-        {step === 'chat' && (
+        {step === 'chat' && embeddingsData && (
           <ChatInterface
             interviewData={interviewData}
             sources={selectedSources}
+            embeddingsData={embeddingsData}
             onBack={handleBackToSources}
           />
         )}
