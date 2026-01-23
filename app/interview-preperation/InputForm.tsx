@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 
 interface InputFormProps {
@@ -23,6 +23,32 @@ export default function InputForm({ onSubmit = () => {} }: InputFormProps) {
     techStack: 'JavaScript, React, Node.js',
     interviewType: 'Technical',
   });
+
+  useEffect(() => {
+    // Check if interview prep data was passed from job listings
+    const savedPrepData = localStorage.getItem('interviewPrepData');
+    if (savedPrepData) {
+      try {
+        const prepData = JSON.parse(savedPrepData);
+        setFormData({
+          companyName: prepData.companyName || formData.companyName,
+          role: prepData.role || formData.role,
+          missingSkills: Array.isArray(prepData.missingSkills) 
+            ? prepData.missingSkills.join(', ')
+            : formData.missingSkills,
+          roleSeniority: prepData.roleSeniority || formData.roleSeniority,
+          techStack: Array.isArray(prepData.techStack)
+            ? prepData.techStack.join(', ')
+            : formData.techStack,
+          interviewType: prepData.interviewType || formData.interviewType,
+        });
+        // Clear the saved data after using it
+        localStorage.removeItem('interviewPrepData');
+      } catch (e) {
+        console.error('Error parsing interview prep data:', e);
+      }
+    }
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
