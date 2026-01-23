@@ -73,69 +73,72 @@
 // ```
 
 // That’s it. You now have a **knowledge base**.
-
+import { InferenceClient } from "@huggingface/inference";
 import fetch from 'node-fetch';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
-
-const HF_API_URL = 'https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-mpnet-base-v2';
-const HF_API_TOKEN = process.env.HUGGINGFACE_API_TOKEN;
+const HF_API_URL = 'https://router.huggingface.co/hf-inference/models/sentence-transformers/all-mpnet-base-v2/pipeline/sentence-similarity';
 
 // --- Embedding function ---
+const client = new InferenceClient(process.env.HUGGINGFACE_API_TOKEN);
+
 export async function embed(text: string): Promise<number[]> {
-  if (!HF_API_TOKEN) {
-    throw new Error('Hugging Face API token not found in environment variables.');
+  if (!process.env.HUGGINGFACE_API_TOKEN) {
+    throw new Error("Hugging Face API token not found in environment variables.");
   }
 
-  const response = await fetch(HF_API_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${HF_API_TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ inputs: text }),
-  });
+  try {
+    const output = await client.sentenceSimilarity({
+      model: "sentence-transformers/all-mpnet-base-v2",
+      inputs: {
+        source_sentence: text,
+        sentences: [text], // For self-similarity, use the same text
+      },
+      provider: "hf-inference",
+    });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Hugging Face API error: ${response.status} ${errorText}`);
+    if (Array.isArray(output) && output.length > 0) {
+      return output; // Return the similarity scores or embeddings
+    }
+
+    throw new Error("Unexpected embedding format from Hugging Face API");
+  } catch (error: any) {
+    console.error("Error in embed function:", error.message);
+    throw error;
   }
-
-  const result = (await response.json()) as number[] | number[][] | unknown;
-
-  if (Array.isArray(result) && result.length > 0 && Array.isArray(result[0])) {
-    return result[0] as number[];
-  }
-  if (Array.isArray(result) && result.every((v) => typeof v === 'number')) {
-    return result as number[];
-  }
-
-  throw new Error('Unexpected embedding format from Hugging Face API');
 }
 
 export async function embedBatch(texts: string[]): Promise<number[][]> {
-  if (!HF_API_TOKEN) throw new Error('Hugging Face API token not found in environment variables.');
-
-  const response = await fetch(HF_API_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${HF_API_TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ inputs: texts }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Hugging Face API error: ${response.status} ${errorText}`);
+  if (!process.env.HUGGINGFACE_API_TOKEN) {
+    throw new Error("Hugging Face API token not found in environment variables.");
   }
 
-  const result = await response.json();
-  if (Array.isArray(result) && Array.isArray(result[0])) {
-    return result as number[][];
+  try {
+    const embeddings: number[][] = [];
+
+    for (const text of texts) {
+      const output = await client.sentenceSimilarity({
+        model: "sentence-transformers/all-mpnet-base-v2",
+        inputs: {
+          source_sentence: text,
+          sentences: [text], // For self-similarity
+        },
+        provider: "hf-inference",
+      });
+
+      if (Array.isArray(output) && output.length > 0) {
+        embeddings.push(output);
+      } else {
+        throw new Error("Unexpected embedding format from Hugging Face API");
+      }
+    }
+
+    return embeddings;
+  } catch (error: any) {
+    console.error("Error in embedBatch function:", error.message);
+    throw error;
   }
-  throw new Error('Unexpected embedding format from Hugging Face API');
 }
 
 // --- Client-owned session types ---

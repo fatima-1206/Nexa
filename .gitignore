@@ -66,3 +66,4 @@ backend/prep/selectedSources.json
 scraped/
 backend/scraped/
 summaries/
+chunks/
