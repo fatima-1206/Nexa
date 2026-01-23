@@ -89,17 +89,14 @@ export async function embed(text: string): Promise<number[]> {
   }
 
   try {
-    const output = await client.sentenceSimilarity({
+    // ✅ Use featureExtraction to get proper embedding vectors
+    const output = await client.featureExtraction({
       model: "sentence-transformers/all-mpnet-base-v2",
-      inputs: {
-        source_sentence: text,
-        sentences: [text], // For self-similarity, use the same text
-      },
-      provider: "hf-inference",
+      inputs: text,
     });
 
     if (Array.isArray(output) && output.length > 0) {
-      return output; // Return the similarity scores or embeddings
+      return output as number[];
     }
 
     throw new Error("Unexpected embedding format from Hugging Face API");
@@ -115,26 +112,17 @@ export async function embedBatch(texts: string[]): Promise<number[][]> {
   }
 
   try {
-    const embeddings: number[][] = [];
+    // ✅ Use featureExtraction for batch processing
+    const output = await client.featureExtraction({
+      model: "sentence-transformers/all-mpnet-base-v2",
+      inputs: texts,
+    });
 
-    for (const text of texts) {
-      const output = await client.sentenceSimilarity({
-        model: "sentence-transformers/all-mpnet-base-v2",
-        inputs: {
-          source_sentence: text,
-          sentences: [text], // For self-similarity
-        },
-        provider: "hf-inference",
-      });
-
-      if (Array.isArray(output) && output.length > 0) {
-        embeddings.push(output);
-      } else {
-        throw new Error("Unexpected embedding format from Hugging Face API");
-      }
+    if (Array.isArray(output) && output.length > 0) {
+      return output as number[][];
     }
 
-    return embeddings;
+    throw new Error("Unexpected embedding format from Hugging Face API");
   } catch (error: any) {
     console.error("Error in embedBatch function:", error.message);
     throw error;
