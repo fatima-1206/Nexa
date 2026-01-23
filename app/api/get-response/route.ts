@@ -18,10 +18,10 @@ const groq = new Groq({
 let globalVectorStore: MemoryVectorStore | null = null;
 
 interface RequestBody {
-  mode: "prepare" | "chat";
+  mode: "prepare" | "chat" | "debug";
   topics?: string[];
   message?: string;
-  embeddingsData?: string; // JSON stringified embeddings from client
+  embeddingsData?: string;
   conversationHistory?: Array<{ role: string; content: string }>;
 }
 
@@ -32,7 +32,44 @@ function initializeVectorStore(embeddingsData: string): MemoryVectorStore {
   const store = createMemoryVectorStore();
   store.fromJSON(embeddingsData);
   globalVectorStore = store;
+  console.log("✅ Vector store initialized with", store.embeddings.length, "embeddings");
   return store;
+}
+
+/**
+ * Debug mode - inspect what's in the vector store
+ */
+async function handleDebugMode(vectorStore: MemoryVectorStore) {
+  try {
+    const totalEmbeddings = vectorStore.embeddings.length;
+    const sampleEmbeddings = vectorStore.embeddings.slice(0, 5).map((e) => ({
+      content: e.content.substring(0, 100) + "...",
+      metadata: e.metadata,
+    }));
+
+    return NextResponse.json(
+      {
+        success: true,
+        mode: "debug",
+        totalEmbeddings,
+        sampleEmbeddings,
+        vectorStoreInfo: {
+          hasEmbeddings: totalEmbeddings > 0,
+          embeddingDimensions: vectorStore.embeddings[0]?.embedding?.length || 0,
+        },
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error in debug mode:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to debug vector store",
+      },
+      { status: 500 }
+    );
+  }
 }
 
 /**
@@ -43,11 +80,38 @@ async function handlePrepareMode(
   vectorStore: MemoryVectorStore
 ) {
   try {
+    console.log("🔍 Prepare mode - Topics requested:", topics);
+
     // Retrieve relevant chunks for each topic
     const retrievalResults = await retrieveRelevantChunks(vectorStore, topics);
+    console.log("✅ Retrieved results:", {
+      topicsRequested: topics.length,
+      resultsReturned: retrievalResults.length,
+      details: retrievalResults.map((r) => ({
+        topic: r.topic,
+        chunksFound: r.chunks.length,
+        firstChunkPreview: r.chunks[0]?.substring(0, 100) || "No chunks",
+      })),
+    });
+
+    if (retrievalResults.length === 0 || retrievalResults.every(r => r.chunks.length === 0)) {
+      console.warn("⚠️  No chunks retrieved for topics:", topics);
+      return NextResponse.json(
+        {
+          success: false,
+          error: "No relevant content found for the requested topics. Try different keywords.",
+          debug: {
+            topicsSearched: topics,
+            vectorStoreSize: vectorStore.embeddings.length,
+          },
+        },
+        { status: 400 }
+      );
+    }
 
     // Generate preparation content
     const preparations = await generatePreparation(retrievalResults);
+    console.log("✅ Generated preparations for", preparations.length, "topics");
 
     // Format for frontend
     const formattedData = formatPreparationForFrontend(preparations);
@@ -57,15 +121,20 @@ async function handlePrepareMode(
         success: true,
         mode: "prepare",
         data: formattedData,
+        debug: {
+          topicsProcessed: topics,
+          chunksRetrieved: retrievalResults.reduce((sum, r) => sum + r.chunks.length, 0),
+        },
       },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error in prepare mode:", error);
+    console.error("❌ Error in prepare mode:", error);
     return NextResponse.json(
       {
         success: false,
         error: "Failed to generate preparation content",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -81,8 +150,11 @@ async function handleChatMode(
   conversationHistory: Array<{ role: string; content: string }> = []
 ) {
   try {
+    console.log("💬 Chat mode - User message:", message);
+
     // Extract topics from user message for retrieval
     const topicsToRetrieve = extractTopics(message);
+    console.log("🔎 Extracted topics:", topicsToRetrieve.length > 0 ? topicsToRetrieve : "['general']");
 
     // Retrieve relevant chunks
     const retrievalResults = await retrieveRelevantChunks(
@@ -90,10 +162,22 @@ async function handleChatMode(
       topicsToRetrieve.length > 0 ? topicsToRetrieve : ["general"]
     );
 
+    console.log("📚 Retrieval results:", {
+      topicsSearched: topicsToRetrieve.length > 0 ? topicsToRetrieve : ["general"],
+      resultsFound: retrievalResults.length,
+      chunksPerTopic: retrievalResults.map((r) => ({
+        topic: r.topic,
+        chunks: r.chunks.length,
+      })),
+      firstChunkPreview: retrievalResults[0]?.chunks[0]?.substring(0, 150) || "No chunks",
+    });
+
     // Build context from retrieved chunks
     const context = retrievalResults
       .map((result) => result.chunks.join("\n"))
       .join("\n\n");
+
+    console.log("📖 Context length:", context.length, "characters");
 
     // Build system prompt
     const systemPrompt = `You are an expert technical interview coach. You have access to the following knowledge base:
@@ -115,6 +199,8 @@ Use this information to provide accurate, helpful answers to interview preparati
       },
     ];
 
+    console.log("📤 Sending to Groq with", messages.length, "total messages");
+
     const response = await groq.chat.completions.create({
       messages: messages as any,
       model: "llama-3.3-70b-versatile",
@@ -125,6 +211,7 @@ Use this information to provide accurate, helpful answers to interview preparati
     });
 
     const assistantResponse = response.choices[0].message.content || "";
+    console.log("✅ Groq response length:", assistantResponse.length, "characters");
 
     return NextResponse.json(
       {
@@ -135,15 +222,21 @@ Use this information to provide accurate, helpful answers to interview preparati
           topic: r.topic,
           chunkCount: r.chunks.length,
         })),
+        debug: {
+          topicsExtracted: topicsToRetrieve,
+          contextLength: context.length,
+          messagesSentToLLM: messages.length,
+        },
       },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error in chat mode:", error);
+    console.error("❌ Error in chat mode:", error);
     return NextResponse.json(
       {
         success: false,
         error: "Failed to generate response",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -154,7 +247,6 @@ Use this information to provide accurate, helpful answers to interview preparati
  * Extract potential topics from user message
  */
 function extractTopics(message: string): string[] {
-  // Simple extraction: split by common keywords
   const keywords = [
     "system design",
     "database",
@@ -183,8 +275,10 @@ export async function POST(request: NextRequest) {
     const body: RequestBody = await request.json();
     const { mode, topics, message, embeddingsData, conversationHistory } = body;
 
+    console.log("🚀 API request received:", { mode, topics, hasMessage: !!message });
+
     // Validate request
-    if (!mode || !["prepare", "chat"].includes(mode)) {
+    if (!mode || !["prepare", "chat", "debug"].includes(mode)) {
       return NextResponse.json(
         { success: false, error: "Invalid mode" },
         { status: 400 }
@@ -195,20 +289,30 @@ export async function POST(request: NextRequest) {
     let vectorStore = globalVectorStore;
 
     if (embeddingsData) {
+      console.log("📥 Initializing vector store from client embeddings");
       vectorStore = initializeVectorStore(embeddingsData);
     }
 
     if (!vectorStore || vectorStore.embeddings.length === 0) {
+      console.error("❌ Vector store not initialized or empty");
       return NextResponse.json(
         {
           success: false,
           error: "Vector store not initialized. Please provide embeddings data.",
+          debug: {
+            hasVectorStore: !!vectorStore,
+            embeddingsCount: vectorStore?.embeddings.length || 0,
+          },
         },
         { status: 400 }
       );
     }
 
     // Route to appropriate handler
+    if (mode === "debug") {
+      return await handleDebugMode(vectorStore);
+    }
+
     if (mode === "prepare") {
       if (!topics || topics.length === 0) {
         return NextResponse.json(
@@ -233,9 +337,13 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
-    console.error("API error:", error);
+    console.error("❌ API error:", error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      {
+        success: false,
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }
