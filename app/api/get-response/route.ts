@@ -46,7 +46,7 @@ async function handlePreparationMode(
   conversationHistory: Array<{ role: string; content: string }> = []
 ) {
   try {
-    console.log("📚 PREPARATION mode - Message:", message);
+    console.log("PREPARATION mode - Message:", message);
 
     // Mode-specific retrieval: favor explanations and best practices
     const retrievalResults = await retrieveForMode(

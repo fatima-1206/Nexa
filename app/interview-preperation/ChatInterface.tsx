@@ -69,8 +69,8 @@ export default function ChatInterface({
       role: 'assistant',
       content:
         newMode === 'PREPARATION'
-          ? '📚 **Switched to Preparation Mode** — I will teach and explain concepts. Ask me about topics you want to understand better.'
-          : '🎯 **Switched to Interview Mode** — I will ask you questions and test your knowledge. Ready for some practice questions?',
+          ? '**Switched to Preparation Mode** — I will teach and explain concepts. Ask me about topics you want to understand better.'
+          : '**Switched to Interview Mode** — I will ask you questions and test your knowledge. Ready for some practice questions?',
       mode: newMode,
     };
     setMessages((prev) => [...prev, modeMessage]);
@@ -387,7 +387,7 @@ export default function ChatInterface({
 
                 {message.sources && message.sources.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-neutral-700 text-xs text-neutral-400 space-y-1">
-                    <p className="font-semibold text-orange-400">📚 Sources:</p>
+                    <p className="font-semibold text-orange-400"> Sources:</p>
                     {message.sources.map((source, idx) => (
                       <p key={idx} className="text-neutral-400">
                         • {source.topic} ({source.chunkCount} chunks)
