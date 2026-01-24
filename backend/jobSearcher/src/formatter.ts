@@ -37,6 +37,7 @@ export class JobFormatter {
     };
   }
 
+  
   /**
    * Parse location into city and country
    * Examples:
