@@ -34,7 +34,11 @@ interface UserProfile {
   skills?: string[]
 }
 
-export default function IntelligencePage() {
+interface IntelligencePageProps {
+  onNavigateToInterviewPrep?: () => void
+}
+
+export default function IntelligencePage({ onNavigateToInterviewPrep }: IntelligencePageProps = {}) {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
   const [jobs, setJobs] = useState<Job[]>([])
@@ -49,7 +53,7 @@ export default function IntelligencePage() {
   } | null>(null)
   const router = useRouter()
 
-  // Load user profile from localStorage on mount
+  // Load user profile and persisted jobs from localStorage on mount
   useEffect(() => {
     const storedData = localStorage.getItem("userData")
     if (storedData) {
@@ -58,6 +62,19 @@ export default function IntelligencePage() {
         setUserProfile(parsed)
       } catch (error) {
         console.error("Error parsing user data:", error)
+      }
+    }
+
+    // Load persisted job search results
+    const storedJobs = localStorage.getItem("jobSearchResults")
+    if (storedJobs) {
+      try {
+        const parsed = JSON.parse(storedJobs)
+        setJobs(parsed.jobs || [])
+        setSearchMetadata(parsed.metadata || null)
+        setHasSearched(true)
+      } catch (error) {
+        console.error("Error parsing job results:", error)
       }
     }
   }, [])
@@ -93,6 +110,12 @@ export default function IntelligencePage() {
 
       setJobs(data.jobs || [])
       setSearchMetadata(data.metadata)
+      
+      // Persist search results to localStorage
+      localStorage.setItem("jobSearchResults", JSON.stringify({
+        jobs: data.jobs || [],
+        metadata: data.metadata
+      }))
     } catch (error) {
       console.error('Error searching jobs:', error)
       setError(error instanceof Error ? error.message : 'Failed to search jobs')
@@ -115,28 +138,72 @@ export default function IntelligencePage() {
       job.matchedSkills.some((skill) => skill.toLowerCase().includes(searchTerm.toLowerCase())),
   )
 
-  const handleStartPreparing = (job: Job) => {
-    // Extract missing skills (skills in job that user might not have)
-    const userSkills = new Set(userProfile?.skills?.map(s => s.toLowerCase()) || [])
-    const missingSkills = job.matchedSkills.filter(
-      skill => !userSkills.has(skill.toLowerCase())
-    )
+  const handleStartPreparing = async (job: Job) => {
+    // Close the modal
+    setSelectedJob(null);
 
-    // Prepare interview data
+    console.log('=== START PREPARING DEBUG ===');
+    console.log('Job object received:', job);
+    console.log('Job title:', job.title);
+    console.log('Job company:', job.company);
+    console.log('Job description exists:', !!job.jobDescription);
+    console.log('Job description length:', job.jobDescription?.length || 0);
+    console.log('Job description preview:', job.jobDescription?.substring(0, 100));
+
+    // Clear ALL old interview prep data first
+    localStorage.removeItem('selectedSources');
+    localStorage.removeItem('embeddingsData');
+    localStorage.removeItem('interviewData');  // This is the correct key
+    localStorage.removeItem('interviewPrepData');  // Remove old incorrect key too
+    console.log('Cleared all old localStorage data');
+
+    // Prepare interview data with job details
     const interviewData = {
       companyName: job.company,
       role: job.title,
-      missingSkills: missingSkills.length > 0 ? missingSkills : job.matchedSkills.slice(0, 3),
-      roleSeniority: "Mid", // Default, could be enhanced based on job level
-      techStack: job.matchedSkills.slice(0, 5),
+      jobDescription: job.jobDescription || '',
+      missingSkills: [],
+      roleSeniority: "Mid",
+      techStack: [],
       interviewType: "Technical",
-    }
+    };
 
-    // Store in localStorage for the interview prep page
-    localStorage.setItem('interviewPrepData', JSON.stringify(interviewData))
+    console.log('Interview data prepared:', interviewData);
+    console.log('Interview data jobDescription length:', interviewData.jobDescription.length);
+
+    // Store job data for preparation
+    const jsonString = JSON.stringify(interviewData);
+    console.log('JSON string length:', jsonString.length);
+    console.log('JSON string preview:', jsonString.substring(0, 200));
     
-    // Navigate to interview preparation
-    router.push('/interview-preperation')
+    // CRITICAL: Store with the SAME key that interview prep page reads from
+    localStorage.setItem('interviewData', jsonString);  // Changed from 'interviewPrepData' to 'interviewData'
+    
+    // Verify it was stored correctly
+    const storedData = localStorage.getItem('interviewData');
+    console.log('Verification - stored data length:', storedData?.length || 0);
+    console.log('Verification - stored data preview:', storedData?.substring(0, 200));
+    
+    // Also remove the old key just in case
+    localStorage.removeItem('prepareJobDescription');
+    
+    // Clear old RAG data to ensure fresh context - ALREADY DONE ABOVE but keeping this comment
+    // localStorage.removeItem('selectedSources');
+    // localStorage.removeItem('embeddingsData');
+    
+    // Set flag to start automated preparation
+    localStorage.setItem('startAutomatedPreparation', 'true');
+    
+    console.log('All data stored, navigating to interview prep...');
+    console.log('=== END START PREPARING DEBUG ===');
+
+    // Navigate immediately to interview preparation
+    if (onNavigateToInterviewPrep) {
+      onNavigateToInterviewPrep();
+    } else {
+      localStorage.setItem('navigateToInterviewPrep', 'true');
+      router.push('/dashboard');
+    }
   }
 
   return (
@@ -524,6 +591,37 @@ export default function IntelligencePage() {
                 >
                   Save Job
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Automated Preparation Loading Modal */}
+      {isLoading && !hasSearched && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <Card className="bg-neutral-900 border-orange-500/50 w-full max-w-md">
+            <CardContent className="p-8">
+              <div className="text-center space-y-4">
+                <div className="inline-block w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                <div>
+                  <h3 className="text-xl font-bold text-orange-500 mb-2">Preparing Your Interview</h3>
+                  <p className="text-neutral-400 text-sm mb-4">AI is analyzing the job and gathering resources...</p>
+                  <div className="space-y-2 text-left text-xs text-neutral-500">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                      <span>Extracting required skills from job description</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+                      <span>Searching for high-quality learning resources</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+                      <span>Building AI knowledge base for your preparation</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -1,9 +1,4 @@
-import { Groq } from "groq-sdk";
 import { RetrievalResult } from "./retrieval";
-
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
 
 export interface PreparationModeResponse {
   topic: string;
@@ -43,23 +38,26 @@ export async function generateTopicExplanation(
   const prompt = buildPrepPrompt(topic, chunksText);
 
   try {
-    let fullContent = "";
-
-    const chatCompletion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      model: "llama-3.3-70b-versatile",
-      temperature: 0.7,
-      max_completion_tokens: 2000,
-      top_p: 1,
-      stream: false, // Set to false to get full response at once
+    const response = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7,
+        max_tokens: 2000,
+      }),
     });
 
-    fullContent = chatCompletion.choices[0].message.content || "";
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const fullContent = data.choices[0].message.content || "";
 
     // Parse the response into structured format
     return {

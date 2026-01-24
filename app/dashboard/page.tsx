@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ChevronRight, Monitor, Settings, Shield, Target, Users, Bell, RefreshCw, User,Briefcase,Book } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import CommandCenterPage from "../command-center/page"
@@ -11,17 +11,26 @@ import UserProfilePage from "../userProfile/page"
 import InterviewPreparationPage from "../interview-preperation/page"
 
 export default function TacticalDashboard() {
-  const [activeSection, setActiveSection] = useState("overview")
+  const [activeSection, setActiveSection] = useState("jobsFound")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
 
+  // Check for navigation flag on mount
+  useEffect(() => {
+    const shouldNavigateToInterviewPrep = localStorage.getItem('navigateToInterviewPrep')
+    if (shouldNavigateToInterviewPrep === 'true') {
+      setActiveSection('interview preparation')
+      localStorage.removeItem('navigateToInterviewPrep')
+    }
+  }, [])
+
   // Update time every second
-  useState(() => {
+  useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date())
     }, 1000)
     return () => clearInterval(timer)
-  })
+  }, [])
 
   // Get page label based on active section
   const getPageLabel = () => {
@@ -140,7 +149,7 @@ export default function TacticalDashboard() {
           {activeSection === "overview" && <CommandCenterPage />}
           {activeSection === "agents" && <AgentNetworkPage />}
           {activeSection === "operations" && <OperationsPage />}
-          {activeSection === "jobsFound" && <IntelligencePage />}
+          {activeSection === "jobsFound" && <IntelligencePage onNavigateToInterviewPrep={() => setActiveSection("interview preparation")} />}
           {activeSection === "user profile" && <UserProfilePage />}
           {activeSection === "interview preparation" && <InterviewPreparationPage />}
         </div>
