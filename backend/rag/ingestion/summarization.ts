@@ -1,10 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import Groq from 'groq-sdk';
-
-const client = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
 
 type Summary = {
   explanation: string;
@@ -64,21 +59,26 @@ Output ONLY a valid JSON object with this exact structure (no markdown, no think
 }`;
 
   try {
-    const completion = await client.chat.completions.create({
-      model: "qwen/qwen3-32b",
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      temperature: 0.5,
-      max_completion_tokens: 1024,
-      top_p: 0.95,
-      stream: false,
+    const response = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.5,
+        max_tokens: 1024,
+      }),
     });
 
-    const content = completion.choices?.[0]?.message?.content || '';
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '';
     return extractJSON(content);
   } catch (error: any) {
     console.error('Failed to generate summary:', error.message);
