@@ -120,7 +120,7 @@ function InterviewPreparationContent() {
           setStep('chat');
           setLoading(false);
           setIsPreparingResources(true);
-          setLogs(['🚀 Starting automated interview preparation...', `📋 Job: ${parsedData.role} at ${parsedData.companyName}`]);
+          setLogs(['Starting automated interview preparation...', `Job: ${parsedData.role} at ${parsedData.companyName}`]);
           
           // Start automated preparation
           startAutomatedPreparation(parsedData);
@@ -206,15 +206,15 @@ function InterviewPreparationContent() {
 
   const startAutomatedPreparation = async (data: typeof interviewData) => {
     try {
-      const statusMsg = '🔍 Parsing job description and extracting skills...';
+      const statusMsg = 'Parsing job description and extracting skills...';
       setPreparationStatus(statusMsg);
       addLog(statusMsg);
       
-      addLog(`📋 Job Title: ${data.role}`);
-      addLog(`🏢 Company: ${data.companyName}`);
-      addLog(`📄 Description Length: ${data.jobDescription?.length || 0} characters`);
+      addLog(`Job Title: ${data.role}`);
+      addLog(`Company: ${data.companyName}`);
+      addLog(`Description Length: ${data.jobDescription?.length || 0} characters`);
       
-      addLog('📡 Calling AI preparation API...');
+      addLog('Calling AI preparation API...');
       const response = await fetch('/api/auto-prepare-interview', {
         method: 'POST',
         headers: {
@@ -227,20 +227,20 @@ function InterviewPreparationContent() {
         }),
       });
 
-      addLog('✅ API response received');
-      const statusMsg2 = '🌐 Searching for high-quality learning resources...';
+      addLog('API response received');
+      const statusMsg2 = 'Searching for high-quality learning resources...';
       setPreparationStatus(statusMsg2);
       addLog(statusMsg2);
       
       const result = await response.json();
-      addLog(`📊 Extracted ${result.skills?.length || 0} skills from job description`);
+      addLog(`Extracted ${result.skills?.length || 0} skills from job description`);
 
       if (!response.ok || !result.success) {
         throw new Error(result.error || 'Failed to prepare resources');
       }
 
-      addLog(`🔗 Found ${result.sources?.length || 0} learning resources`);
-      const statusMsg3 = '🧠 Building AI knowledge base...';
+      addLog(`Found ${result.sources?.length || 0} learning resources`);
+      const statusMsg3 = 'Building AI knowledge base...';
       setPreparationStatus(statusMsg3);
       addLog(statusMsg3);
 
@@ -260,11 +260,11 @@ function InterviewPreparationContent() {
       localStorage.setItem(LOCAL_STORAGE_EMBEDDINGS_KEY, JSON.stringify(result.vectorStore));
       localStorage.setItem(LOCAL_STORAGE_INTERVIEW_DATA_KEY, JSON.stringify(updatedData));
 
-      addLog('💾 Saved embeddings and resources to local storage');
-      const finalMsg = '✅ Ready! Your AI interview coach is loaded.';
+      addLog('Saved embeddings and resources to local storage');
+      const finalMsg = 'Ready! Your AI interview coach is loaded.';
       setPreparationStatus(finalMsg);
       addLog(finalMsg);
-      addLog('🎯 You can now start asking questions!');
+      addLog('You can now start asking questions!');
       
       setTimeout(() => {
         setIsPreparingResources(false);
@@ -272,10 +272,10 @@ function InterviewPreparationContent() {
       }, 1500);
     } catch (error) {
       console.error('Error in automated preparation:', error);
-      const errorMsg = `❌ Error: ${error instanceof Error ? error.message : 'Failed to prepare resources'}`;
+      const errorMsg = `Error: ${error instanceof Error ? error.message : 'Failed to prepare resources'}`;
       setPreparationStatus(errorMsg);
       addLog(errorMsg);
-      addLog('🔄 Please try again or contact support');
+      addLog('Please try again or contact support');
       setTimeout(() => {
         setIsPreparingResources(false);
         setPreparationStatus('');
