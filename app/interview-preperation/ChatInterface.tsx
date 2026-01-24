@@ -251,7 +251,7 @@ export default function ChatInterface({
           <div className="flex-1 bg-black border-2 border-orange-500/50 rounded-lg p-6 overflow-y-auto shadow-2xl" style={{ minHeight: '500px' }}>
             <div className="flex items-center gap-3 mb-4 pb-3 border-b-2 border-orange-500/30">
               <div className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
-              <span className="text-orange-400 font-mono text-base font-bold tracking-wider">🔴 LIVE CONSOLE</span>
+              <span className="text-orange-400 font-mono text-base font-bold tracking-wider">LIVE CONSOLE</span>
             </div>
             <div className="space-y-3 font-mono text-sm">
               {logs.length === 0 ? (
