@@ -14,6 +14,12 @@ export default function TacticalDashboard() {
   const [activeSection, setActiveSection] = useState("jobsFound")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [systemStats, setSystemStats] = useState({
+    activePreps: 0,
+    jobsFound: 0,
+    chatSessions: 0,
+    resources: 0,
+  })
 
   // Check for navigation flag on mount
   useEffect(() => {
@@ -22,6 +28,40 @@ export default function TacticalDashboard() {
       setActiveSection('interview preparation')
       localStorage.removeItem('navigateToInterviewPrep')
     }
+  }, [])
+
+  // Load system stats from localStorage
+  useEffect(() => {
+    const loadStats = () => {
+      try {
+        const jobsData = localStorage.getItem('jobSearchResults')
+        const jobs = jobsData ? JSON.parse(jobsData) : null
+        const totalJobs = jobs?.jobs ? jobs.jobs.length : 0
+
+        const sessionsData = localStorage.getItem('chatSessions')
+        const sessions = sessionsData ? JSON.parse(sessionsData) : []
+
+        const sourcesData = localStorage.getItem('selectedSources')
+        const sources = sourcesData ? JSON.parse(sourcesData) : []
+
+        const interviewData = localStorage.getItem('interviewData')
+        const currentInterview = interviewData ? JSON.parse(interviewData) : null
+
+        setSystemStats({
+          activePreps: currentInterview ? 1 : 0,
+          jobsFound: totalJobs,
+          chatSessions: sessions.length,
+          resources: sources.length,
+        })
+      } catch (error) {
+        console.error('Error loading system stats:', error)
+      }
+    }
+
+    loadStats()
+    // Refresh stats every 10 seconds
+    const interval = setInterval(loadStats, 10000)
+    return () => clearInterval(interval)
   }, [])
 
   // Update time every second
@@ -35,7 +75,7 @@ export default function TacticalDashboard() {
   // Get page label based on active section
   const getPageLabel = () => {
     const labels: Record<string, string> = {
-      overview: "COMMAND CENTER",
+      overview: "OVERVIEW",
       agents: "AGENT NETWORK",
       operations: "OPERATIONS",
       jobsFound: "JOBS",
@@ -81,12 +121,12 @@ export default function TacticalDashboard() {
 
           <nav className="space-y-2">
             {[
+              { id: "overview", icon: Monitor, label: "OVERVIEW" },
             //   { id: "agents", icon: Users, label: "AGENT NETWORK" },
             //   { id: "operations", icon: Target, label: "OPERATIONS" },
-            { id: "overview", icon: Monitor, label: "COMMAND CENTER" },
-              { id: "user profile", icon: User, label: "USER PROFILE" },
               { id: "jobsFound", icon: Briefcase, label: "JOBS" },
               { id: "interview preparation", icon: Book, label: "INTERVIEW PREPARATION" },
+              { id: "user profile", icon: User, label: "USER PROFILE" },
             ].map((item) => (
               <button
                 key={item.id}
@@ -106,13 +146,26 @@ export default function TacticalDashboard() {
           {!sidebarCollapsed && (
             <div className="mt-8 p-4 bg-neutral-800 border border-neutral-700 rounded">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                <span className="text-xs text-white">SYSTEM ONLINE</span>
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-xs text-green-500 font-semibold">AI COACH ONLINE</span>
               </div>
-              <div className="text-xs text-neutral-500">
-                <div>UPTIME: 72:14:33</div>
-                <div>AGENTS: 847 ACTIVE</div>
-                <div>MISSIONS: 23 ONGOING</div>
+              <div className="text-xs text-neutral-400 space-y-1">
+                <div className="flex justify-between">
+                  <span>Active Prep:</span>
+                  <span className="text-orange-500 font-mono">{systemStats.activePreps}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Jobs Found:</span>
+                  <span className="text-white font-mono">{systemStats.jobsFound}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Chat Sessions:</span>
+                  <span className="text-white font-mono">{systemStats.chatSessions}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Resources:</span>
+                  <span className="text-white font-mono">{systemStats.resources}</span>
+                </div>
               </div>
             </div>
           )}
