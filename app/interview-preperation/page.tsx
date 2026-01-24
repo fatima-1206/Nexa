@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import InputForm from "./InputForm";
+import InputForm from './InputForm';
 import SourceSearch from './SourceSearch';
 import ChatInterface from './ChatInterface';
 
@@ -13,7 +13,7 @@ const LOCAL_STORAGE_SOURCES_KEY = 'persistedSources';
 const LOCAL_STORAGE_EMBEDDINGS_KEY = 'embeddingsData';
 const LOCAL_STORAGE_INTERVIEW_DATA_KEY = 'interviewData';
 
-export default function InterviewPreparationPage() {
+function InterviewPreparationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<PageStep>('input');
@@ -294,20 +294,41 @@ export default function InterviewPreparationPage() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Content */}
       <div className="flex-1 flex flex-col p-6 overflow-hidden">
         <div className="flex-1 flex flex-col overflow-hidden">
-          <
-            ChatInterface
-            interviewData={interviewData}
-            sources={selectedSources}
-            embeddingsData={embeddingsData}
-            isPreparingResources={isPreparingResources}
-            preparationStatus={preparationStatus}
-            logs={logs}
-          />
+          {step === 'input' && <InputForm onSubmit={(data) => setInterviewData(data)} />}
+          {step === 'sources' && (
+            <SourceSearch
+              interviewData={interviewData}
+              onComplete={(sources, embeddings) => {
+                setSelectedSources(sources);
+                setEmbeddingsData(embeddings);
+                setStep('chat');
+              }}
+              onBack={() => setStep('input')}
+            />
+          )}
+          {step === 'chat' && (
+            <ChatInterface
+              interviewData={interviewData}
+              sources={selectedSources}
+              embeddingsData={embeddingsData}
+              isPreparingResources={isPreparingResources}
+              preparationStatus={preparationStatus}
+              logs={logs}
+              onBack={() => setStep('sources')}
+            />
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function InterviewPreparationPage() {
+  return (
+    <Suspense fallback={<div className="text-orange-500">Loading...</div>}>
+      <InterviewPreparationContent />
+    </Suspense>
   );
 }
