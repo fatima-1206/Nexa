@@ -115,29 +115,116 @@ export default function IntelligencePage() {
       job.matchedSkills.some((skill) => skill.toLowerCase().includes(searchTerm.toLowerCase())),
   )
 
-  const handleStartPreparing = (job: Job) => {
-    // Extract missing skills (skills in job that user might not have)
-    const userSkills = new Set(userProfile?.skills?.map(s => s.toLowerCase()) || [])
+
+  const handleStartPreparing = async (job: Job) => {
+  setIsLoading(true);
+  setError(null);
+  console.log("DEBUG: Extracting missing skills: ");
+
+  try {
+    // Extract missing skills
+    const userSkills = new Set(userProfile?.skills?.map((s) => s.toLowerCase()) || []);
     const missingSkills = job.matchedSkills.filter(
-      skill => !userSkills.has(skill.toLowerCase())
-    )
+      (skill) => !userSkills.has(skill.toLowerCase())
+    );
 
     // Prepare interview data
     const interviewData = {
       companyName: job.company,
       role: job.title,
-      missingSkills: missingSkills.length > 0 ? missingSkills : job.matchedSkills.slice(0, 3),
-      roleSeniority: "Mid", // Default, could be enhanced based on job level
-      techStack: job.matchedSkills.slice(0, 5),
+      missingSkills: missingSkills.length > 0 ? missingSkills : job.matchedSkills.slice(0, 15),
+      roleSeniority: "Mid",
+      techStack: job.matchedSkills.slice(0, 15),
       interviewType: "Technical",
+      skills: job.matchedSkills.slice(0, 15),
+      company: job.company,
+      experience: "Mid-level",
+    };
+
+    // Store interview data in localStorage
+    localStorage.setItem("interviewPrepData", JSON.stringify(interviewData));
+    
+    // Call the find-sources API
+    const response = await fetch("/api/find-sources", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        role: job.title,
+        company: job.company,
+        skills: job.matchedSkills,
+        // missingSkills: missingSkills.length > 0 ? missingSkills : job.matchedSkills.slice(0, 15),
+        // just adding one skill for debugging for so that the tavily api limit doesn't run out
+        missingSkills: ['C++'],
+        roleSeniority: "Mid",
+        techStack: job.matchedSkills.slice(0, 15),
+        interviewType: "Technical",
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || "Failed to find sources");
     }
 
-    // Store in localStorage for the interview prep page
-    localStorage.setItem('interviewPrepData', JSON.stringify(interviewData))
+    // Extract sources from the response - data already contains curatedSources
+    const sources = data.data.curatedSources || [];
     
-    // Navigate to interview preparation
-    router.push('/interview-preperation')
+    console.log('DEBUG: Extracted sources:', sources);
+    console.log('DEBUG: Sources length:', sources.length);
+    
+    if (!sources || sources.length === 0) {
+      throw new Error("No sources found in the response");
+    }
+
+    // Step 1: Save sources
+    console.log('DEBUG: Sources being sent to /api/save-selected-sources:', sources);
+
+    const saveResponse = await fetch('/api/save-selected-sources', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sources }),
+    });
+    const saveData = await saveResponse.json();
+    
+    if (!saveResponse.ok) {
+      throw new Error(saveData.error || 'Failed to save sources');
+    }
+
+    console.log('DEBUG: Sources saved successfully:', saveData);
+
+    // Call build vector DB API
+    const vectorDbResponse = await fetch('/api/build-embeddings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sources,
+      }),
+    });
+
+    if (!vectorDbResponse.ok) {
+      const vectorError = await vectorDbResponse.json();
+      throw new Error(vectorError.error || 'Failed to build vector database');
+    }
+
+    const vectorDbData = await vectorDbResponse.json();
+    localStorage.setItem('embeddingsData', JSON.stringify(vectorDbData.embeddingsData));
+    localStorage.setItem('interviewData', JSON.stringify(interviewData));
+
+    // Navigate to interview preparation with chat step
+    router.push('/interview-preperation?step=chat');
+  } catch (error) {
+    console.error('Error in preparation workflow:', error);
+    setError(error instanceof Error ? error.message : 'Failed to start preparation');
+  } finally {
+    setIsLoading(false);
   }
+};
+  
 
   return (
     <div className="p-6 space-y-6">

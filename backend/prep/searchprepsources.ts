@@ -210,26 +210,34 @@ function hardFilterSources(sources: any[]): any[] {
 export async function searchForInterviewPrep(
     searchInput: SearchInput
 ): Promise<SearchOutput> {
-    console.log("🔍 Step 1: Expanding missing skills into search queries...");
-    const skillQueries = await expandMissingSkillsToQueries(
-        searchInput.missingSkills,
-        searchInput.role,
-        searchInput.roleSeniority,
-        searchInput.interviewType,
-        searchInput.techStack
-    );
+    // Validate and provide default values for missing fields
+    const missingSkills = searchInput.missingSkills || [];
+    // const skills = searchInput.skills || [];
+    const role = searchInput.role || "Unknown Role";
+    const roleSeniority = searchInput.roleSeniority || "Unknown Seniority";
+    const interviewType = searchInput.interviewType || "General";
+    const techStack = searchInput.techStack || [];
 
+    console.log("Expanding missing skills into search queries...");
+    const skillQueries = await expandMissingSkillsToQueries(
+        missingSkills,
+        role,
+        roleSeniority,
+        interviewType,
+        techStack
+    );
+    
     // Log the search queries
     console.log("\n🔎 Generated Search Queries:");
     console.log(JSON.stringify(skillQueries, null, 2));
     // write them to output.txt
     fs.writeFileSync('output.txt', JSON.stringify(skillQueries, null, 2));
 
-    console.log("📡 Step 2: Executing searches via Tavily...");
+    console.log("Executing searches via Tavily...");
     const allQueries = Object.values(skillQueries).flat();
     let rawResults = await executeSearch(allQueries);
 
-    console.log("🧹 Step 3: Hard filtering sources...");
+    console.log("Hard filtering sources...");
     const filteredResults = hardFilterSources(rawResults);
     console.log("Number of sources found: ", filteredResults.length);
     // Construct the final output
