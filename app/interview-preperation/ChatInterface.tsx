@@ -437,7 +437,7 @@ export default function ChatInterface({
 
                 {message.sources && message.sources.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-neutral-700 text-xs text-neutral-400 space-y-1">
-                    <p className="font-semibold text-orange-400">📚 Sources:</p>
+                    <p className="font-semibold text-orange-400">Sources:</p>
                     {message.sources.map((source, idx) => (
                       <p key={idx} className="text-neutral-400">
                         • {source.topic} ({source.chunkCount} chunks)
@@ -464,7 +464,7 @@ export default function ChatInterface({
         {showScrollButton && (
           <button
             onClick={scrollToBottom}
-            className="absolute bottom-28 right-6 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-full p-3 shadow-2xl transition-all duration-300 hover:scale-110 z-50 border-2 border-orange-400/50 animate-bounce"
+            className="absolute bottom-28 right-6 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-full p-3 shadow-2xl transition-all duration-300 hover:scale-110 z-50 border-2 border-orange-400/50 animate-bounce mr-5"
             aria-label="Scroll to bottom"
             style={{
               boxShadow: '0 0 20px rgba(249, 115, 22, 0.5)'
@@ -492,7 +492,7 @@ export default function ChatInterface({
             <Button
               type="submit"
               disabled={loading || !inputValue.trim()}
-              className="px-6 py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded flex items-center gap-2 transition-all"
+              className="px-6 py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded flex items-center gap-2 transition-all mt-1"
             >
               <Send className="w-4 h-4" />
             </Button>

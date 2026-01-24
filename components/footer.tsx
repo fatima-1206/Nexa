@@ -48,9 +48,20 @@ export default function FooterDemo() {
         brandDescription="Nexa is an AI career engine that turns your resume into a roadmap for the right roles."
         socialLinks={socialLinks}
         navLinks={navLinks}
-        creatorName="Shilok, Fatima & Ramalah"
-        creatorUrl="https://shilok.dev"
-        brandIcon={<Image src="/logo.svg" alt="Nexa Logo" width={56} height={56} className="w-8 sm:w-10 md:w-14 h-8 sm:h-10 md:h-14 drop-shadow-lg" />}
+        creators={[
+          { name: "Shilok", url: "https://shilok.dev" },
+          { name: "Fatima", url: "https://fatimatuzahraportfolio.vercel.app/" },
+          { name: "Ramalah", url: "https://www.linkedin.com/in/ramalah-amir/" }
+        ]}
+        brandIcon={
+          <Image
+            src="/logo.svg"
+            alt="Nexa Logo"
+            width={56}
+            height={56}
+            className="w-8 sm:w-10 md:w-14 h-8 sm:h-10 md:h-14 drop-shadow-lg"
+          />
+        }
       />
     </>
   );

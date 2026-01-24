@@ -7,10 +7,14 @@ import "./globals.css"
 const geistMono = GeistMono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "AI-powered Carreer Preparation Platform",
+  title: "Nexa | AI-powered Carreer Preparation Platform",
   description: "Optimize your career journey with AI Tutor",
-    generator: 'v0.app'
+  generator: 'v0.app',
+  icons: {
+    icon: '/logo.svg',
+  }
 }
+
 
 export default function RootLayout({
   children,

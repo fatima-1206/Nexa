@@ -28,6 +28,7 @@ interface FooterProps {
   navLinks?: FooterLink[];
   creatorName?: string;
   creatorUrl?: string;
+  creators?: { name: string; url: string }[];
   brandIcon?: React.ReactNode;
   className?: string;
 }
@@ -39,6 +40,7 @@ export const Footer = ({
   navLinks = [],
   creatorName,
   creatorUrl,
+  creators = [],
   brandIcon,
   className,
 }: FooterProps) => {
@@ -98,26 +100,42 @@ export const Footer = ({
             <p className="text-base text-muted-foreground text-center md:text-left">
               ©{new Date().getFullYear()} {brandName}. All rights reserved.
             </p>
-            {creatorName && creatorUrl && (
+            {creators.length > 0 ? (
+              <nav className="flex flex-wrap gap-4 justify-center items-center">
+                <span className="text-base text-muted-foreground">
+                  Crafted with ❤️ by
+                </span>
+                {creators.map((creator, index) => (
+                  <Link
+                    key={index}
+                    href={creator.url}
+                    target="_blank"
+                    className="text-base text-muted-foreground hover:text-[#f97316] transition-colors duration-300 hover:font-medium"
+                  >
+                    {creator.name}
+                  </Link>
+                ))}
+              </nav>
+            ) : creatorName && creatorUrl ? (
               <nav className="flex gap-4">
                 <Link
                   href={creatorUrl}
                   target="_blank"
                   className="text-base text-muted-foreground hover:text-[#f97316] transition-colors duration-300 hover:font-medium"
                 >
-                  Crafted with ❤️ by  {creatorName}
+                  Crafted with ❤️ by {creatorName}
                 </Link>
               </nav>
-            )}
+            ) : null}
           </div>
         </div>
 
         {/* Large background text - FIXED */}
-        <div 
+        <div
           className="bg-gradient-to-b from-foreground/20 via-foreground/10 to-transparent bg-clip-text text-transparent leading-none absolute left-1/2 -translate-x-1/2 bottom-40 md:bottom-32 font-extrabold tracking-tighter pointer-events-none select-none text-center px-4"
           style={{
-            fontSize: 'clamp(3rem, 12vw, 10rem)',
-            maxWidth: '95vw'
+            fontSize: "clamp(3rem, 12vw, 10rem)",
+            maxWidth: "95vw",
           }}
         >
           {brandName.toUpperCase()}
