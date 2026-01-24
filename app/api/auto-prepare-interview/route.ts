@@ -3,19 +3,14 @@ import { scrapeSources } from '@/backend/rag/ingestion/webscraper';
 import { summarizeSources } from '@/backend/rag/ingestion/summarization';
 import { createChunks } from '@/backend/rag/ingestion/chunking';
 import { prepareChunksForClient, createMemoryVectorStore } from '@/backend/rag/ingestion/embedding';
+import fs from 'fs';
+import Groq from 'groq-sdk';
+
+const groq = new Groq();
 
 interface SkillExtractionResult {
   skills: string[];
   searchQueries: { skill: string; query: string }[];
-}
-
-interface TavilySearchResult {
-  results: Array<{
-    title: string;
-    url: string;
-    content: string;
-    score: number;
-  }>;
 }
 
 /**
@@ -49,27 +44,15 @@ Return ONLY a valid JSON object in this exact format:
 Be thorough but focus on the most important skills mentioned or implied in the job description.`;
 
   try {
-    const response = await fetch('https://models.inference.ai.azure.com/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.3,
-        max_tokens: 2000,
-      }),
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+      max_tokens: 2000,
     });
 
-    if (!response.ok) {
-      throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
-    }
+    const content = response.choices[0].message.content || '';
 
-    const data = await response.json();
-    const content = data.choices[0].message.content || '';
-    
     // Extract JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
@@ -78,7 +61,7 @@ Be thorough but focus on the most important skills mentioned or implied in the j
 
     const result = JSON.parse(jsonMatch[0]) as SkillExtractionResult;
     console.log(`Extracted ${result.skills.length} skills from job description`);
-    
+
     return result;
   } catch (error) {
     console.error('Error extracting skills:', error);

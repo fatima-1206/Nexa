@@ -1,60 +1,49 @@
-import OpenAI from 'openai';
+import fs from 'fs';
+import Groq from 'groq-sdk';
 import { ParsedResume } from './types';
 
-const endpoint = "https://models.github.ai/inference";
-const modelName = "openai/gpt-4o";
+const groq = new Groq();
+const modelName = "llama-3.3-70b-versatile";
 
 /**
- * AI-powered resume parser using GPT-4o via GitHub inference
+ * AI-powered resume parser using Groq LLM
  */
 export class AIResumeParser {
-  private client: OpenAI;
   private text: string;
 
-  constructor(text: string, token?: string) {
-    const apiKey = token || process.env.GITHUB_TOKEN;
-    
-    if (!apiKey) {
-      throw new Error('GITHUB_TOKEN is required. Pass it as a parameter or set it in environment variables.');
-    }
-    
+  constructor(text: string) {
     this.text = text;
-    this.client = new OpenAI({ 
-      baseURL: endpoint, 
-      apiKey: apiKey 
-    });
   }
 
   /**
-   * Parse resume using GPT-4o and return structured JSON
+   * Parse resume using Groq LLM and return structured JSON
    */
   async parse(): Promise<ParsedResume> {
     const systemPrompt = this.getSystemPrompt();
     const userPrompt = this.getUserPrompt();
 
     try {
-      const response = await this.client.chat.completions.create({
+      const response = await groq.chat.completions.create({
+        model: modelName,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
         temperature: 0.3,
-        top_p: 1.0,
         max_tokens: 4000,
-        model: modelName,
-        response_format: { type: "json_object" }
+        response_format: "verbose_json",
       });
 
       const content = response.choices[0].message.content;
       if (!content) {
-        throw new Error('No response from AI model');
+        throw new Error('No response from Groq model');
       }
 
       const parsedData = JSON.parse(content) as ParsedResume;
       return this.validateAndCleanData(parsedData);
     } catch (error) {
-      console.error('Error parsing resume with AI:', error);
-      throw new Error(`AI parsing failed: ${error}`);
+      console.error('Error parsing resume with Groq:', error);
+      throw new Error(`Groq parsing failed: ${error}`);
     }
   }
 
