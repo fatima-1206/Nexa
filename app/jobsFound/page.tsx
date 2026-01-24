@@ -117,113 +117,101 @@ export default function IntelligencePage() {
 
 
   const handleStartPreparing = async (job: Job) => {
-  setIsLoading(true);
-  setError(null);
-  console.log("DEBUG: Extracting missing skills: ");
+    setIsLoading(true);
+    setError(null);
 
-  try {
-    // Extract missing skills
-    const userSkills = new Set(userProfile?.skills?.map((s) => s.toLowerCase()) || []);
-    const missingSkills = job.matchedSkills.filter(
-      (skill) => !userSkills.has(skill.toLowerCase())
-    );
+    try {
+      // Extract missing skills
+      const userSkills = new Set(userProfile?.skills?.map((s) => s.toLowerCase()) || []);
+      const missingSkills = job.matchedSkills.filter(
+        (skill) => !userSkills.has(skill.toLowerCase())
+      );
 
-    // Prepare interview data
-    const interviewData = {
-      companyName: job.company,
-      role: job.title,
-      missingSkills: missingSkills.length > 0 ? missingSkills : job.matchedSkills.slice(0, 15),
-      roleSeniority: "Mid",
-      techStack: job.matchedSkills.slice(0, 15),
-      interviewType: "Technical",
-      skills: job.matchedSkills.slice(0, 15),
-      company: job.company,
-      experience: "Mid-level",
-    };
-
-    // Store interview data in localStorage
-    localStorage.setItem("interviewPrepData", JSON.stringify(interviewData));
-    
-    // Call the find-sources API
-    const response = await fetch("/api/find-sources", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+      // Prepare interview data with correct field names
+      const interviewData = {
+        companyName: job.company,
         role: job.title,
-        company: job.company,
-        skills: job.matchedSkills,
-        // missingSkills: missingSkills.length > 0 ? missingSkills : job.matchedSkills.slice(0, 15),
-        // just adding one skill for debugging for so that the tavily api limit doesn't run out
-        missingSkills: ['C++'],
+        missingSkills: missingSkills.length > 0 ? missingSkills : job.matchedSkills.slice(0, 15),
         roleSeniority: "Mid",
         techStack: job.matchedSkills.slice(0, 15),
         interviewType: "Technical",
-      }),
-    });
+        skills: job.matchedSkills.slice(0, 15),
+        company: job.company,
+        experience: "Mid-level",
+      };
 
-    const data = await response.json();
+      console.log('Interview data to save:', interviewData);
 
-    if (!data.success) {
-      throw new Error(data.error || "Failed to find sources");
+      // Save interview data to localStorage FIRST
+      localStorage.setItem('interviewData', JSON.stringify(interviewData));
+
+      // Call the find-sources API
+      const response = await fetch("/api/find-sources", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          role: job.title,
+          company: job.company,
+          skills: job.matchedSkills,
+          missingSkills: missingSkills,
+          roleSeniority: "Mid",
+          techStack: job.matchedSkills.slice(0, 15),
+          interviewType: "Technical",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || "Failed to find sources");
+      }
+
+      const sources = data.data.curatedSources || [];
+      
+      if (!sources || sources.length === 0) {
+        throw new Error("No sources found in the response");
+      }
+
+      console.log('Sources found:', sources.length);
+
+      // Save sources to localStorage
+      localStorage.setItem('selectedSources', JSON.stringify(sources));
+
+      // Step 2: Build vector DB
+      const vectorDbResponse = await fetch('/api/build-vector-db', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sources,
+        }),
+      });
+
+      if (!vectorDbResponse.ok) {
+        const vectorError = await vectorDbResponse.json();
+        throw new Error(vectorError.error || 'Failed to build vector database');
+      }
+
+      const vectorDbData = await vectorDbResponse.json();
+      
+      console.log('Vector DB built, saving embeddings');
+
+      // Save embeddings data to localStorage
+      localStorage.setItem('embeddingsData', JSON.stringify(vectorDbData.embeddingsData));
+
+      console.log('All data saved, navigating to chat');
+
+      // Navigate directly to chat
+      router.push('/interview-preperation?step=chat');
+    } catch (error) {
+      console.error('Error in preparation workflow:', error);
+      setError(error instanceof Error ? error.message : 'Failed to start preparation');
+      setIsLoading(false);
     }
-
-    // Extract sources from the response - data already contains curatedSources
-    const sources = data.data.curatedSources || [];
-    
-    console.log('DEBUG: Extracted sources:', sources);
-    console.log('DEBUG: Sources length:', sources.length);
-    
-    if (!sources || sources.length === 0) {
-      throw new Error("No sources found in the response");
-    }
-
-    // Step 1: Save sources
-    console.log('DEBUG: Sources being sent to /api/save-selected-sources:', sources);
-
-    const saveResponse = await fetch('/api/save-selected-sources', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sources }),
-    });
-    const saveData = await saveResponse.json();
-    
-    if (!saveResponse.ok) {
-      throw new Error(saveData.error || 'Failed to save sources');
-    }
-
-    console.log('DEBUG: Sources saved successfully:', saveData);
-
-    // Call build vector DB API
-    const vectorDbResponse = await fetch('/api/build-embeddings', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        sources,
-      }),
-    });
-
-    if (!vectorDbResponse.ok) {
-      const vectorError = await vectorDbResponse.json();
-      throw new Error(vectorError.error || 'Failed to build vector database');
-    }
-
-    const vectorDbData = await vectorDbResponse.json();
-    localStorage.setItem('embeddingsData', JSON.stringify(vectorDbData.embeddingsData));
-    localStorage.setItem('interviewData', JSON.stringify(interviewData));
-
-    // Navigate to interview preparation with chat step
-    router.push('/interview-preperation?step=chat');
-  } catch (error) {
-    console.error('Error in preparation workflow:', error);
-    setError(error instanceof Error ? error.message : 'Failed to start preparation');
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
   
 
   return (
@@ -444,6 +432,8 @@ export default function IntelligencePage() {
                         <div className="mt-1 text-right">{job.relevanceReason}</div>
                       </div>
 
+         
+
                       <Button
                         size="sm"
                         className="bg-orange-500 hover:bg-orange-600 text-white mt-2"
@@ -452,8 +442,19 @@ export default function IntelligencePage() {
                           window.open(job.url, '_blank')
                         }}
                       >
-                        <ExternalLink className="w-3 h-3 mr-1" />
+                        <ExternalLink className="w-4 h-4 mr-2" />
                         Apply
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-orange-500 hover:bg-orange-600 text-white mt-2"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent event bubbling
+                          handleStartPreparing(job); // Call the preparation function
+                        }}
+                      >
+                        <Briefcase className="w-4 h-4 mr-2" />
+                        Prepare
                       </Button>
                     </div>
                   </div>
@@ -587,10 +588,10 @@ export default function IntelligencePage() {
                   Apply Now
                 </Button>
                 <Button
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="border border-orange-500 text-orange-500 bg-neutral-900 hover:bg-orange-500/10"
                   onClick={() => {
-                    handleStartPreparing(selectedJob)
-                    setSelectedJob(null)
+                    handleStartPreparing(selectedJob);
+                    setSelectedJob(null);
                   }}
                 >
                   <Briefcase className="w-4 h-4 mr-2" />

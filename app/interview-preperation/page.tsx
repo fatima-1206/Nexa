@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import InputForm from "./InputForm";
 import SourceSearch from './SourceSearch';
 import ChatInterface from './ChatInterface';
@@ -13,6 +14,8 @@ const LOCAL_STORAGE_EMBEDDINGS_KEY = 'embeddingsData';
 const LOCAL_STORAGE_INTERVIEW_DATA_KEY = 'interviewData';
 
 export default function InterviewPreparationPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<PageStep>('input');
   const [interviewData, setInterviewData] = useState({
     skills: [] as string[],
@@ -24,7 +27,69 @@ export default function InterviewPreparationPage() {
   const [embeddingsData, setEmbeddingsData] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
+  // Synchronize `step` state with the URL query parameter
   useEffect(() => {
+    const urlStep = searchParams.get('step') as PageStep;
+    if (urlStep && ['input', 'sources', 'chat'].includes(urlStep)) {
+      setStep(urlStep);
+    }
+  }, [searchParams]);
+
+  // Initialize data from localStorage - BUT ONLY IF NO URL STEP IS PROVIDED
+  useEffect(() => {
+    const urlStep = searchParams.get('step');
+    
+    // If there's a URL step parameter, load the necessary data for that step
+    if (urlStep && ['input', 'sources', 'chat'].includes(urlStep)) {
+      // For chat step, load all necessary data
+      if (urlStep === 'chat') {
+        const savedSelected = localStorage.getItem(LOCAL_STORAGE_KEY);
+        const savedEmbeddings = localStorage.getItem(LOCAL_STORAGE_EMBEDDINGS_KEY);
+        const savedInterviewData = localStorage.getItem(LOCAL_STORAGE_INTERVIEW_DATA_KEY);
+
+        console.log('Chat step - saved data:', {
+          savedSelected: !!savedSelected,
+          savedEmbeddings: !!savedEmbeddings,
+          savedInterviewData: !!savedInterviewData,
+        });
+
+        if (savedSelected && savedEmbeddings && savedInterviewData) {
+          try {
+            const parsed = JSON.parse(savedSelected);
+            const embeddingsParsed = JSON.parse(savedEmbeddings);
+            const interviewDataParsed = JSON.parse(savedInterviewData);
+            
+            console.log('Raw interview data:', interviewDataParsed);
+            
+            setSelectedSources(Array.isArray(parsed) ? parsed : []);
+            setEmbeddingsData(typeof embeddingsParsed === 'string' ? embeddingsParsed : JSON.stringify(embeddingsParsed));
+            
+            // Normalize the interview data structure
+            const normalizedData = {
+              skills: interviewDataParsed.skills || interviewDataParsed.techStack || [],
+              role: interviewDataParsed.role || '',
+              company: interviewDataParsed.company || interviewDataParsed.companyName || '',
+              experience: interviewDataParsed.experience || interviewDataParsed.roleSeniority || '',
+            };
+            
+            console.log('Normalized interview data:', normalizedData);
+            setInterviewData(normalizedData);
+          } catch (e) {
+            console.error('Error parsing saved data:', e);
+            // Clear corrupted data
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
+            localStorage.removeItem(LOCAL_STORAGE_EMBEDDINGS_KEY);
+            localStorage.removeItem(LOCAL_STORAGE_INTERVIEW_DATA_KEY);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+      setLoading(false);
+      return;
+    }
+
+    // Original initialization logic for when no URL step is provided
     const savedSelected = localStorage.getItem(LOCAL_STORAGE_KEY);
     const savedEmbeddings = localStorage.getItem(LOCAL_STORAGE_EMBEDDINGS_KEY);
     const savedInterviewData = localStorage.getItem(LOCAL_STORAGE_INTERVIEW_DATA_KEY);
@@ -36,7 +101,6 @@ export default function InterviewPreparationPage() {
         if (data.sources && Array.isArray(data.sources) && data.sources.length > 0) {
           setSelectedSources(data.sources);
           
-          // Try to load embeddings
           if (data.embeddingsData) {
             setEmbeddingsData(data.embeddingsData);
             setStep('chat');
@@ -95,12 +159,12 @@ export default function InterviewPreparationPage() {
     }
 
     fetchSelectedSources();
-  }, []);
+  }, [searchParams]);
 
   const handleInputSubmit = (data: typeof interviewData) => {
     setInterviewData(data);
     localStorage.setItem(LOCAL_STORAGE_INTERVIEW_DATA_KEY, JSON.stringify(data));
-    setStep('sources');
+    router.push('/interview-preperation?step=sources');
   };
 
   const handleSourcesComplete = (sources: any[], newEmbeddingsData: string) => {
@@ -108,11 +172,11 @@ export default function InterviewPreparationPage() {
     setEmbeddingsData(newEmbeddingsData);
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sources));
     localStorage.setItem(LOCAL_STORAGE_EMBEDDINGS_KEY, JSON.stringify(newEmbeddingsData));
-    setStep('chat');
+    router.push('/interview-preperation?step=chat');
   };
 
   const handleBackToSources = () => {
-    setStep('sources');
+    router.push('/interview-preperation?step=sources');
     setSelectedSources([]);
     setEmbeddingsData('');
     localStorage.removeItem(LOCAL_STORAGE_KEY);
@@ -145,7 +209,7 @@ export default function InterviewPreparationPage() {
           />
         )}
 
-        {step === 'chat' && embeddingsData && interviewData.role && (
+        {step === 'chat' && embeddingsData && selectedSources.length > 0 && (
           <ChatInterface
             interviewData={interviewData}
             sources={selectedSources}
