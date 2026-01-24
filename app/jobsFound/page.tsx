@@ -428,7 +428,7 @@ export default function IntelligencePage({ onNavigateToInterviewPrep }: Intellig
 
                       <Button
                         size="sm"
-                        className="bg-orange-500 hover:bg-orange-600 text-white mt-2"
+                        className="bg-orange-500 hover:bg-orange-600 text-white mt-10"
                         onClick={(e) => {
                           e.stopPropagation()
                           window.open(job.url, '_blank')
@@ -437,7 +437,7 @@ export default function IntelligencePage({ onNavigateToInterviewPrep }: Intellig
                         <ExternalLink className="w-4 h-4 mr-2" />
                         Apply
                       </Button>
-                      <Button
+                      {/* <Button
                         size="sm"
                         className="bg-orange-500 hover:bg-orange-600 text-white mt-2"
                         onClick={(e) => {
@@ -447,7 +447,7 @@ export default function IntelligencePage({ onNavigateToInterviewPrep }: Intellig
                       >
                         <Briefcase className="w-4 h-4 mr-2" />
                         Prepare
-                      </Button>
+                      </Button> */}
                     </div>
                   </div>
                 </div>
