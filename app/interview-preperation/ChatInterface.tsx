@@ -22,7 +22,10 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   sources?: Array<{ topic: string; chunkCount: number }>;
+  mode?: 'PREPARATION' | 'INTERVIEW';
 }
+
+type Mode = 'PREPARATION' | 'INTERVIEW';
 
 export default function ChatInterface({
   interviewData,
@@ -35,11 +38,13 @@ export default function ChatInterface({
   const role = interviewData?.role || 'Software Engineer';
   const company = interviewData?.company || 'Your Target Company';
 
+  const [mode, setMode] = useState<Mode>('PREPARATION');
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
       content: `I'm your interview preparation coach. I have ${sources.length} resources loaded about ${role} interviews at ${company}. Let's start preparing! What would you like to focus on first?`,
+      mode: 'PREPARATION',
     },
   ]);
   const [inputValue, setInputValue] = useState('');
@@ -55,6 +60,22 @@ export default function ChatInterface({
     scrollToBottom();
   }, [messages]);
 
+  const handleModeChange = (newMode: Mode) => {
+    setMode(newMode);
+    
+    // Add a system message when mode changes
+    const modeMessage: Message = {
+      id: Date.now().toString(),
+      role: 'assistant',
+      content:
+        newMode === 'PREPARATION'
+          ? '📚 **Switched to Preparation Mode** — I will teach and explain concepts. Ask me about topics you want to understand better.'
+          : '🎯 **Switched to Interview Mode** — I will ask you questions and test your knowledge. Ready for some practice questions?',
+      mode: newMode,
+    };
+    setMessages((prev) => [...prev, modeMessage]);
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
@@ -63,6 +84,7 @@ export default function ChatInterface({
       id: Date.now().toString(),
       role: 'user',
       content: inputValue,
+      mode,
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -84,7 +106,7 @@ export default function ChatInterface({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          mode: 'chat',
+          mode: mode, // Now sends "PREPARATION" or "INTERVIEW" directly
           message: messageToSend,
           embeddingsData,
           conversationHistory,
@@ -97,11 +119,27 @@ export default function ChatInterface({
         throw new Error(data.error || 'Failed to get response');
       }
 
+      let messageContent = '';
+      
+      // Handle PREPARATION mode (returns data object)
+      if (mode === 'PREPARATION' && data.data) {
+        messageContent = formatPreparedContent(data.data);
+      }
+      // Handle INTERVIEW mode (returns response string)
+      else if (mode === 'INTERVIEW' && data.response) {
+        messageContent = data.response;
+      }
+      // Fallback
+      else {
+        messageContent = data.response || 'No response generated';
+      }
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.response,
+        content: messageContent,
         sources: data.sources,
+        mode,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -111,6 +149,7 @@ export default function ChatInterface({
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: 'Sorry, I encountered an error. Please try again.',
+        mode,
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -119,71 +158,77 @@ export default function ChatInterface({
   };
 
   const handlePrepare = async (topics: string[]) => {
-    setLoading(true);
+      setLoading(true);
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: `Prepare me on: ${topics.join(', ')}`,
-    };
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: 'user',
+        content: `Prepare me on: ${topics.join(', ')}`,
+        mode: 'PREPARATION',
+      };
 
-    setMessages((prev) => [...prev, userMessage]);
+      setMessages((prev) => [...prev, userMessage]);
 
-    try {
-      const response = await fetch('/api/get-response', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          mode: 'prepare',
-          topics,
-          embeddingsData,
-        }),
-      });
+      try {
+        const response = await fetch('/api/get-response', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            mode: 'PREPARATION',
+            message: topics.join(', '),
+            embeddingsData,
+          }),
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to generate preparation content');
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to generate preparation content');
+        }
+
+        const preparationContent = formatPreparedContent(data.data);
+
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: preparationContent,
+          mode: 'PREPARATION',
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
+      } catch (error) {
+        console.error('Error in preparation mode:', error);
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: 'Failed to generate preparation content. Please try again.',
+          mode: 'PREPARATION',
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      } finally {
+        setLoading(false);
       }
+  };
 
-      const preparationData: Record<
-        string,
-        { explanation: string; keyPoints: string[]; commonMistakes: string[] }
-      > = data.data;
-
-      const preparationContent = Object.entries(preparationData)
-        .map(([topic, content]) => {
-          const keyPointsText = content.keyPoints && content.keyPoints.length > 0
-            ? content.keyPoints.map((p) => `- ${p}`).join('\n')
+  const formatPreparedContent = (data: Record<string, any>): string => {
+    if (!data) return '';
+    
+    return Object.entries(data)
+      .map(([topic, content]: [string, any]) => {
+        const keyPointsText =
+          content.keyPoints && content.keyPoints.length > 0
+            ? content.keyPoints.map((p: string) => `- ${p}`).join('\n')
             : 'No key points found';
-          const mistakesText = content.commonMistakes && content.commonMistakes.length > 0
-            ? content.commonMistakes.map((m) => `- ${m}`).join('\n')
+        const mistakesText =
+          content.commonMistakes && content.commonMistakes.length > 0
+            ? content.commonMistakes.map((m: string) => `- ${m}`).join('\n')
             : 'No common mistakes listed';
 
-          return `## ${topic}\n\n${content.explanation}\n\n### Key Points\n${keyPointsText}\n\n### Common Mistakes\n${mistakesText}`;
-        })
-        .join('\n\n---\n\n');
-
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: preparationContent,
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Error in preparation mode:', error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: 'Failed to generate preparation content. Please try again.',
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setLoading(false);
-    }
+        return `## ${topic}\n\n${content.explanation}\n\n### Key Points\n${keyPointsText}\n\n### Common Mistakes\n${mistakesText}`;
+      })
+      .join('\n\n---\n\n');
   };
 
   return (
@@ -282,6 +327,36 @@ export default function ChatInterface({
 
       {/* Chat Interface */}
       <div className="flex-1 flex flex-col">
+        {/* Mode Toggle Header */}
+        <div className="border-b border-neutral-700 bg-neutral-900 p-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-orange-500">Interview Coach</h2>
+          
+          {/* Mode Toggle Slider */}
+          <div className="flex items-center gap-3 bg-neutral-800 border border-neutral-700 rounded-full p-1">
+            <button
+              onClick={() => handleModeChange('PREPARATION')}
+              className={`px-4 py-2 rounded-full font-semibold text-sm transition-all ${
+                mode === 'PREPARATION'
+                  ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
+                  : 'text-neutral-400 hover:text-neutral-300'
+              }`}
+            >
+              📚 Preparation
+            </button>
+            <div className="w-px h-6 bg-neutral-700"></div>
+            <button
+              onClick={() => handleModeChange('INTERVIEW')}
+              className={`px-4 py-2 rounded-full font-semibold text-sm transition-all ${
+                mode === 'INTERVIEW'
+                  ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
+                  : 'text-neutral-400 hover:text-neutral-300'
+              }`}
+            >
+              🎯 Interview
+            </button>
+          </div>
+        </div>
+
         {/* Messages Container */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {messages.map((message) => (
@@ -345,7 +420,11 @@ export default function ChatInterface({
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Ask your interview coach..."
+              placeholder={
+                mode === 'PREPARATION'
+                  ? 'Ask to learn about a topic...'
+                  : 'Press Enter to get a question...'
+              }
               disabled={loading}
               className="flex-1 bg-neutral-800 border border-neutral-700 rounded px-4 py-3 text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 disabled:opacity-50 transition-all"
             />
