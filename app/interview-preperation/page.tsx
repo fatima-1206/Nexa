@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import InputForm from "./InputForm";
 import SourceSearch from './SourceSearch';
 import ChatInterface from './ChatInterface';
@@ -13,22 +14,124 @@ const LOCAL_STORAGE_EMBEDDINGS_KEY = 'embeddingsData';
 const LOCAL_STORAGE_INTERVIEW_DATA_KEY = 'interviewData';
 
 export default function InterviewPreparationPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<PageStep>('input');
   const [interviewData, setInterviewData] = useState({
-    skills: [] as string[],
+    companyName: '',
     role: '',
-    company: '',
-    experience: '',
+    jobDescription: '',
+    missingSkills: [] as string[],
+    roleSeniority: '',
+    techStack: [] as string[],
+    interviewType: '',
   });
   const [selectedSources, setSelectedSources] = useState<any[]>([]);
   const [embeddingsData, setEmbeddingsData] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [preparationStatus, setPreparationStatus] = useState<string>('');
+  const [isPreparingResources, setIsPreparingResources] = useState(false);
+  const [logs, setLogs] = useState<string[]>([]);
 
+  // Synchronize `step` state with the URL query parameter
   useEffect(() => {
+    const urlStep = searchParams.get('step') as PageStep;
+    if (urlStep && ['input', 'sources', 'chat'].includes(urlStep)) {
+      setStep(urlStep);
+    }
+  }, [searchParams]);
+
+  // Initialize data from localStorage - BUT ONLY IF NO URL STEP IS PROVIDED
+  useEffect(() => {
+    const urlStep = searchParams.get('step');
+    
+    // If there's a URL step parameter, load the necessary data for that step
+    if (urlStep && ['input', 'sources', 'chat'].includes(urlStep)) {
+      // For chat step, load all necessary data
+      if (urlStep === 'chat') {
+        const savedSelected = localStorage.getItem(LOCAL_STORAGE_KEY);
+        const savedEmbeddings = localStorage.getItem(LOCAL_STORAGE_EMBEDDINGS_KEY);
+        const savedInterviewData = localStorage.getItem(LOCAL_STORAGE_INTERVIEW_DATA_KEY);
+
+        console.log('Chat step - saved data:', {
+          savedSelected: !!savedSelected,
+          savedEmbeddings: !!savedEmbeddings,
+          savedInterviewData: !!savedInterviewData,
+        });
+
+        if (savedSelected && savedEmbeddings && savedInterviewData) {
+          try {
+            const parsed = JSON.parse(savedSelected);
+            const embeddingsParsed = JSON.parse(savedEmbeddings);
+            const interviewDataParsed = JSON.parse(savedInterviewData);
+            
+            console.log('Raw interview data:', interviewDataParsed);
+            
+            setSelectedSources(Array.isArray(parsed) ? parsed : []);
+            setEmbeddingsData(typeof embeddingsParsed === 'string' ? embeddingsParsed : JSON.stringify(embeddingsParsed));
+            
+            // Normalize the interview data structure
+            const normalizedData = {
+              skills: interviewDataParsed.skills || interviewDataParsed.techStack || [],
+              role: interviewDataParsed.role || '',
+              company: interviewDataParsed.company || interviewDataParsed.companyName || '',
+              experience: interviewDataParsed.experience || interviewDataParsed.roleSeniority || '',
+            };
+            
+            console.log('Normalized interview data:', normalizedData);
+            setInterviewData(normalizedData);
+          } catch (e) {
+            console.error('Error parsing saved data:', e);
+            // Clear corrupted data
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
+            localStorage.removeItem(LOCAL_STORAGE_EMBEDDINGS_KEY);
+            localStorage.removeItem(LOCAL_STORAGE_INTERVIEW_DATA_KEY);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+      setLoading(false);
+      return;
+    }
+
+    // Original initialization logic for when no URL step is provided
     const savedSelected = localStorage.getItem(LOCAL_STORAGE_KEY);
     const savedEmbeddings = localStorage.getItem(LOCAL_STORAGE_EMBEDDINGS_KEY);
     const savedInterviewData = localStorage.getItem(LOCAL_STORAGE_INTERVIEW_DATA_KEY);
+    const shouldStartAutomatedPrep = localStorage.getItem('startAutomatedPreparation');
 
+    // Check if we should start automated preparation
+    if (shouldStartAutomatedPrep === 'true') {
+      localStorage.removeItem('startAutomatedPreparation');
+      
+      // Load interview data
+      if (savedInterviewData) {
+        try {
+          const parsedData = JSON.parse(savedInterviewData);
+          console.log('Loaded interview data from localStorage:', {
+            role: parsedData.role,
+            company: parsedData.companyName,
+            hasDescription: !!parsedData.jobDescription,
+            descriptionLength: parsedData.jobDescription?.length || 0,
+            fullData: parsedData
+          });
+          setInterviewData(parsedData);
+          setStep('chat');
+          setLoading(false);
+          setIsPreparingResources(true);
+          setLogs(['🚀 Starting automated interview preparation...', `📋 Job: ${parsedData.role} at ${parsedData.companyName}`]);
+          
+          // Start automated preparation
+          startAutomatedPreparation(parsedData);
+          return;
+        } catch (e) {
+          console.error('Error parsing interview data:', e);
+        }
+      }
+    }
+
+    // Only load old data if NOT starting automated prep
     async function fetchSelectedSources() {
       try {
         const res = await fetch('/api/load-selected-sources');
@@ -36,7 +139,6 @@ export default function InterviewPreparationPage() {
         if (data.sources && Array.isArray(data.sources) && data.sources.length > 0) {
           setSelectedSources(data.sources);
           
-          // Try to load embeddings
           if (data.embeddingsData) {
             setEmbeddingsData(data.embeddingsData);
             setStep('chat');
@@ -51,7 +153,7 @@ export default function InterviewPreparationPage() {
         console.error('Error fetching selected sources:', e);
       }
       setLoading(false);
-      setStep('input');
+      setStep('chat');
     }
 
     if (savedSelected && savedEmbeddings && savedInterviewData) {
@@ -66,7 +168,7 @@ export default function InterviewPreparationPage() {
           embeddingsParsed &&
           interviewDataParsed &&
           interviewDataParsed.role &&
-          interviewDataParsed.company
+          interviewDataParsed.companyName
         ) {
           setSelectedSources(parsed);
           setEmbeddingsData(embeddingsParsed);
@@ -95,28 +197,91 @@ export default function InterviewPreparationPage() {
     }
 
     fetchSelectedSources();
-  }, []);
+  }, [searchParams]);
 
-  const handleInputSubmit = (data: typeof interviewData) => {
-    setInterviewData(data);
-    localStorage.setItem(LOCAL_STORAGE_INTERVIEW_DATA_KEY, JSON.stringify(data));
-    setStep('sources');
+  const addLog = (message: string) => {
+    setLogs(prev => [...prev, message]);
+    console.log(message);
   };
 
-  const handleSourcesComplete = (sources: any[], newEmbeddingsData: string) => {
-    setSelectedSources(sources);
-    setEmbeddingsData(newEmbeddingsData);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sources));
-    localStorage.setItem(LOCAL_STORAGE_EMBEDDINGS_KEY, JSON.stringify(newEmbeddingsData));
-    setStep('chat');
-  };
+  const startAutomatedPreparation = async (data: typeof interviewData) => {
+    try {
+      const statusMsg = '🔍 Parsing job description and extracting skills...';
+      setPreparationStatus(statusMsg);
+      addLog(statusMsg);
+      
+      addLog(`📋 Job Title: ${data.role}`);
+      addLog(`🏢 Company: ${data.companyName}`);
+      addLog(`📄 Description Length: ${data.jobDescription?.length || 0} characters`);
+      
+      addLog('📡 Calling AI preparation API...');
+      const response = await fetch('/api/auto-prepare-interview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jobTitle: data.role,
+          jobDescription: data.jobDescription,
+          company: data.companyName,
+        }),
+      });
 
-  const handleBackToSources = () => {
-    setStep('sources');
-    setSelectedSources([]);
-    setEmbeddingsData('');
-    localStorage.removeItem(LOCAL_STORAGE_KEY);
-    localStorage.removeItem(LOCAL_STORAGE_EMBEDDINGS_KEY);
+      addLog('✅ API response received');
+      const statusMsg2 = '🌐 Searching for high-quality learning resources...';
+      setPreparationStatus(statusMsg2);
+      addLog(statusMsg2);
+      
+      const result = await response.json();
+      addLog(`📊 Extracted ${result.skills?.length || 0} skills from job description`);
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to prepare resources');
+      }
+
+      addLog(`🔗 Found ${result.sources?.length || 0} learning resources`);
+      const statusMsg3 = '🧠 Building AI knowledge base...';
+      setPreparationStatus(statusMsg3);
+      addLog(statusMsg3);
+
+      // Update interview data with extracted skills
+      const updatedData = {
+        ...data,
+        missingSkills: result.skills.slice(0, 5),
+        techStack: result.skills.slice(0, 10),
+      };
+      setInterviewData(updatedData);
+
+      // Store the prepared data
+      setSelectedSources(result.sources || []);
+      setEmbeddingsData(result.vectorStore);
+      
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(result.sources || []));
+      localStorage.setItem(LOCAL_STORAGE_EMBEDDINGS_KEY, JSON.stringify(result.vectorStore));
+      localStorage.setItem(LOCAL_STORAGE_INTERVIEW_DATA_KEY, JSON.stringify(updatedData));
+
+      addLog('💾 Saved embeddings and resources to local storage');
+      const finalMsg = '✅ Ready! Your AI interview coach is loaded.';
+      setPreparationStatus(finalMsg);
+      addLog(finalMsg);
+      addLog('🎯 You can now start asking questions!');
+      
+      setTimeout(() => {
+        setIsPreparingResources(false);
+        setPreparationStatus('');
+      }, 1500);
+    } catch (error) {
+      console.error('Error in automated preparation:', error);
+      const errorMsg = `❌ Error: ${error instanceof Error ? error.message : 'Failed to prepare resources'}`;
+      setPreparationStatus(errorMsg);
+      addLog(errorMsg);
+      addLog('🔄 Please try again or contact support');
+      setTimeout(() => {
+        setIsPreparingResources(false);
+        setPreparationStatus('');
+        setStep('chat');
+      }, 3000);
+    }
   };
 
   if (loading) {
@@ -128,31 +293,20 @@ export default function InterviewPreparationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-neutral-900 to-black p-6">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold text-orange-500 mb-2 neon-glow">
-          Interview Preparation
-        </h1>
-        <p className="text-neutral-400 mb-8">Master your interview with AI-powered preparation</p>
-
-        {step === 'input' && <InputForm onSubmit={handleInputSubmit} />}
-
-        {step === 'sources' && (
-          <SourceSearch
-            interviewData={interviewData}
-            onComplete={handleSourcesComplete}
-            onBack={() => setStep('input')}
-          />
-        )}
-
-        {step === 'chat' && embeddingsData && interviewData.role && (
-          <ChatInterface
+    <div className="h-full flex flex-col">
+      {/* Content */}
+      <div className="flex-1 flex flex-col p-6 overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <
+            ChatInterface
             interviewData={interviewData}
             sources={selectedSources}
             embeddingsData={embeddingsData}
-            onBack={handleBackToSources}
+            isPreparingResources={isPreparingResources}
+            preparationStatus={preparationStatus}
+            logs={logs}
           />
-        )}
+        </div>
       </div>
     </div>
   );
