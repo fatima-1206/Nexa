@@ -332,28 +332,29 @@ export default function ChatInterface({
           <h2 className="text-lg font-bold text-orange-500">Interview Coach</h2>
           
           {/* Mode Toggle Slider */}
-          <div className="flex items-center gap-3 bg-neutral-800 border border-neutral-700 rounded-full p-1">
-            <button
-              onClick={() => handleModeChange('PREPARATION')}
-              className={`px-4 py-2 rounded-full font-semibold text-sm transition-all ${
-                mode === 'PREPARATION'
-                  ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
-                  : 'text-neutral-400 hover:text-neutral-300'
+          <div className="flex items-center gap-3 mr-20">
+
+            <div
+              className={`relative w-16 h-8 ${
+                mode === 'INTERVIEW' ? 'bg-orange-500' : 'bg-neutral-700'
+              } rounded-full cursor-pointer transition-all ${
+                loading ? 'opacity-50 cursor-not-allowed' : ''
               }`}
+              onClick={() => {
+                if (!loading) handleModeChange(mode === 'PREPARATION' ? 'INTERVIEW' : 'PREPARATION');
+              }}
             >
-              📚 Preparation
-            </button>
-            <div className="w-px h-6 bg-neutral-700"></div>
-            <button
-              onClick={() => handleModeChange('INTERVIEW')}
-              className={`px-4 py-2 rounded-full font-semibold text-sm transition-all ${
-                mode === 'INTERVIEW'
-                  ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
-                  : 'text-neutral-400 hover:text-neutral-300'
-              }`}
-            >
-              🎯 Interview
-            </button>
+              <div
+                className={`absolute top-1/2 left-1 w-6 h-6 ${
+                  mode === 'INTERVIEW' ? 'bg-neutral-900' : 'bg-white'
+                } rounded-full shadow-md transform -translate-y-1/2 transition-transform ${
+                  mode === 'INTERVIEW' ? 'translate-x-8' : 'translate-x-0'
+                }`}
+              ></div>
+            </div>
+            <span className="text-sm font-semibold text-neutral-400">
+              {mode === 'PREPARATION' ? 'Preparation' : 'Interview'}
+            </span>
           </div>
         </div>
 
