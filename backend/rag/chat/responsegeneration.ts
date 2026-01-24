@@ -49,30 +49,67 @@ Format your answer with clear sections and use practical, interview-relevant lan
 /**
  * Build questioning prompt for INTERVIEW mode
  */
-function buildInterviewPrompt(userMessage: string, chunks: string, conversationHistory: Array<{ role: string; content: string }>): string {
+function buildInterviewPrompt(
+  userMessage: string,
+  chunks: string,
+  conversationHistory: Array<{ role: string; content: string }>
+): string {
   const isFirstQuestion = conversationHistory.length === 0;
+  const lastAssistantMsg = conversationHistory.filter(m => m.role === "assistant").pop()?.content || "";
   
+  // Detect user intent
+  const userWantsHint = /hint|help|explain|tell me|show me|i don't know|idk|stuck|lost/i.test(userMessage);
+  const userWantsAnswer = /answer|solution|just tell|give me|reveal/i.test(userMessage);
+  const userSeemsConfident = /yes|correct|right|exactly|true|definitely|sure|i think|i believe/i.test(userMessage);
+
+  let systemInstruction = "";
+  
+  if (userWantsAnswer) {
+    systemInstruction = `
+The user is asking for the answer. Provide it clearly with explanation.
+Then ask: "Now that you know this, how would you apply it in [context]?"
+This transitions back to testing understanding.`;
+  } else if (userWantsHint) {
+    systemInstruction = `
+The user is stuck. Provide a helpful hint without giving away the full answer.
+Then ask a simpler follow-up question or rephrase the original question.`;
+  } else if (userSeemsConfident) {
+    systemInstruction = `
+The user seems confident in their answer. Acknowledge it.
+Then either:
+- Ask a follow-up to probe deeper, OR
+- Move to the next topic
+
+Pick ONE direction based on the quality of their answer.`;
+  } else if (isFirstQuestion) {
+    systemInstruction = `Generate an opening question that is challenging but fair.`;
+  } else {
+    systemInstruction = `Generate a follow-up based on their previous answer. Probe for depth.`;
+  }
+
   return `You are a technical interviewer conducting a mock interview.
 
-${isFirstQuestion ? "Generate an opening question." : "Generate a follow-up question based on the conversation."}
+${systemInstruction}
 
-Rules (STRICT):
-- DO ask challenging questions
-- DO probe for depth and tradeoffs
-- DO NOT teach or explain unless explicitly asked
-- Focus on edge cases and problem-solving
-- Increase difficulty based on previous answers
+Rules:
+- Listen to the user. If they ask for an answer, give it.
+- If they're stuck, provide hints progressively (don't interrogate forever).
+- If they give a reasonable answer, acknowledge it and move forward.
+- Be conversational, not robotic.
+- Know when to accept an answer and move on.
+- If the user says "I don't know", you can either:
+  1. Simplify the question
+  2. Provide a hint
+  3. Give the answer and move forward
+  
+DO NOT keep asking the same question if they're clearly lost.
 
 Context (study materials for reference):
 ${chunks}
 
-${conversationHistory.length > 0 ? `Previous exchange:\n${conversationHistory.slice(-2).map(m => `${m.role}: ${m.content}`).join('\n')}\n` : ""}
+${conversationHistory.length > 0 ? `Previous exchange:\n${conversationHistory.slice(-3).map(m => `${m.role === "assistant" ? "Interviewer" : "Candidate"}: ${m.content}`).join('\n')}\n` : ""}
 
-Generate a single focused question that:
-1. Is clear and unambiguous
-2. Tests practical understanding
-3. Has room for follow-ups
-4. Is appropriate for a technical interview`;
+Respond naturally. If providing an answer, structure it clearly. If asking a question, make it specific and answerable.`;
 }
 
 /**
@@ -133,8 +170,8 @@ export async function generateInterviewQuestion(
         },
       ],
       model: "llama-3.3-70b-versatile",
-      temperature: 0.8,
-      max_completion_tokens: 500,
+      temperature: 0.7, // Lowered from 0.8 for more consistency
+      max_completion_tokens: 800, // Increased from 500 for longer explanations
       top_p: 1,
       stream: false,
     });
@@ -205,9 +242,11 @@ function extractCommonMistakes(content: string): string[] {
 /**
  * Detect question difficulty based on conversation depth
  */
-function detectDifficulty(conversationHistory: Array<{ role: string; content: string }>): "basic" | "intermediate" | "advanced" {
+function detectDifficulty(
+  conversationHistory: Array<{ role: string; content: string }>
+): "basic" | "intermediate" | "advanced" {
   if (conversationHistory.length === 0) return "basic";
-  if (conversationHistory.length < 4) return "intermediate";
+  if (conversationHistory.length < 6) return "intermediate";
   return "advanced";
 }
 
@@ -216,15 +255,25 @@ function detectDifficulty(conversationHistory: Array<{ role: string; content: st
  */
 function extractExpectedAreas(question: string): string[] {
   const areas: string[] = [];
-  const keywords = ["approach", "tradeoff", "edge case", "optimization", "complexity", "scalability"];
-  
-  keywords.forEach(keyword => {
+  const keywords = [
+    "approach",
+    "tradeoff",
+    "edge case",
+    "optimization",
+    "complexity",
+    "scalability",
+    "answer",
+    "explain",
+    "hint",
+  ];
+
+  keywords.forEach((keyword) => {
     if (question.toLowerCase().includes(keyword)) {
       areas.push(keyword);
     }
   });
 
-  return areas.length > 0 ? areas : ["problem-solving"];
+  return areas.length > 0 ? areas : ["conversation"];
 }
 
 /**
