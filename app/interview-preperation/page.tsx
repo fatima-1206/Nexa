@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import InputForm from "./InputForm";
 import SourceSearch from './SourceSearch';
@@ -13,7 +13,7 @@ const LOCAL_STORAGE_SOURCES_KEY = 'persistedSources';
 const LOCAL_STORAGE_EMBEDDINGS_KEY = 'embeddingsData';
 const LOCAL_STORAGE_INTERVIEW_DATA_KEY = 'interviewData';
 
-export default function InterviewPreparationPage() {
+function InterviewPreparationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<PageStep>('input');
@@ -285,11 +285,7 @@ export default function InterviewPreparationPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-black via-neutral-900 to-black">
-        <span className="text-orange-500 text-xl">Loading...</span>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -309,5 +305,17 @@ export default function InterviewPreparationPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function InterviewPreparationPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-black via-neutral-900 to-black">
+        <span className="text-orange-500 text-xl">Loading...</span>
+      </div>
+    }>
+      <InterviewPreparationContent />
+    </Suspense>
   );
 }
