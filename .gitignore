@@ -63,7 +63,14 @@ dist/
 backend/resume-parser/parsed-resume.json
 
 backend/prep/selectedSources.json
-scraped/
-backend/scraped/
-summaries/
-chunks/
+scraped/*
+backend/scraped/*
+summaries/*
+chunks/*
+backend/rag/ingestion/chunks/*
+!backend/rag/ingestion/chunks/temp.json
+backend/rag/ingestion/scraped/*
+!backend/rag/ingestion/scraped/temp.txt
+backend/rag/ingestion/summaries/*
+!backend/rag/ingestion/summaries/temp.json
+
