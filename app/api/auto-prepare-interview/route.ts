@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { scrapeSources } from '@/backend/rag/ingestion/webscraper';
 import { summarizeSources } from '@/backend/rag/ingestion/summarization';
-import { loadSummaries, createChunks, saveChunks } from '@/backend/rag/ingestion/chunking';
+import { createChunks } from '@/backend/rag/ingestion/chunking';
 import { prepareChunksForClient, createMemoryVectorStore } from '@/backend/rag/ingestion/embedding';
-import fs from 'fs';
-import path from 'path';
 
 interface SkillExtractionResult {
   skills: string[];
@@ -149,8 +147,8 @@ export async function POST(req: NextRequest) {
     console.log('Starting automated interview preparation...');
 
     const body = await req.json();
-    console.log('Received body:', { 
-      jobTitle: body.jobTitle, 
+    console.log('Received body:', {
+      jobTitle: body.jobTitle,
       company: body.company,
       hasDescription: !!body.jobDescription,
       descriptionLength: body.jobDescription?.length || 0
@@ -201,21 +199,9 @@ export async function POST(req: NextRequest) {
     // Step 3: Process through RAG pipeline
     console.log('Step 3: Processing through RAG pipeline...');
 
-    const baseDir = process.cwd();
-    const scrapedDir = path.join(baseDir, 'backend', 'rag', 'ingestion', 'scraped');
-    const summariesDir = path.join(baseDir, 'backend', 'rag', 'ingestion', 'summaries');
-    const chunksDir = path.join(baseDir, 'backend', 'rag', 'ingestion', 'chunks');
-
-    // Ensure directories exist
-    [scrapedDir, summariesDir, chunksDir].forEach(dir => {
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-    });
-
     // Scrape sources
     console.log('Scraping sources...');
-    const scrapedData = await scrapeSources(sources, scrapedDir);
+    const scrapedData = await scrapeSources(sources);
     
     if (scrapedData.length === 0) {
       return NextResponse.json(
@@ -226,18 +212,16 @@ export async function POST(req: NextRequest) {
 
     // Summarize
     console.log('Generating summaries...');
-    await summarizeSources(scrapedData, summariesDir);
+    const summaries = await summarizeSources(scrapedData);
 
-    // Load summaries and create chunks
+    // Create chunks and vector store (in-memory)
     console.log('Creating chunks...');
-    const summaries = loadSummaries(summariesDir);
     const memoryVectorStore = createMemoryVectorStore();
     let totalChunks = 0;
 
     for (const { title, url, summary } of summaries) {
       try {
         const chunks = createChunks(summary, title, url);
-        saveChunks(chunks, chunksDir, title);
         totalChunks += chunks.length;
 
         // Prepare embeddings

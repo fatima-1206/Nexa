@@ -1,4 +1,3 @@
-import fs from 'fs';
 import path from 'path';
 
 type Summary = {
@@ -87,25 +86,24 @@ Output ONLY a valid JSON object with this exact structure (no markdown, no think
 }
 
 export async function summarizeSources(
-  scrapedData: { title: string; url: string; text: string }[],
-  summariesDir: string
-) {
-  if (!fs.existsSync(summariesDir)) {
-    fs.mkdirSync(summariesDir, { recursive: true });
-  }
+  scrapedData: { title: string; url: string; text: string }[]
+): Promise<{ title: string; url: string; summary: Summary }[]> {
+  const results = [];
 
   for (const data of scrapedData) {
     try {
-      // console.log(`Summarizing: ${data.title}...`);
+      console.log(`Summarizing: ${data.title}...`);
       const summary = await generateSummary(data.text);
-      const filename = data.title.replace(/\W+/g, '_').slice(0, 40);
-      fs.writeFileSync(
-        path.join(summariesDir, `${filename}.json`),
-        JSON.stringify(summary, null, 2)
-      );
+      results.push({
+        title: data.title,
+        url: data.url,
+        summary
+      });
       console.log(`✓ Summarized: ${data.title}`);
     } catch (error: any) {
       console.error(`✗ Failed to summarize ${data.title}:`, error.message);
     }
   }
+
+  return results;
 }
