@@ -81,12 +81,12 @@ export default function TacticalDashboard() {
 
           <nav className="space-y-2">
             {[
-              { id: "overview", icon: Monitor, label: "COMMAND CENTER" },
             //   { id: "agents", icon: Users, label: "AGENT NETWORK" },
             //   { id: "operations", icon: Target, label: "OPERATIONS" },
+            { id: "overview", icon: Monitor, label: "COMMAND CENTER" },
+              { id: "user profile", icon: User, label: "USER PROFILE" },
               { id: "jobsFound", icon: Briefcase, label: "JOBS" },
               { id: "interview preparation", icon: Book, label: "INTERVIEW PREPARATION" },
-              { id: "user profile", icon: User, label: "USER PROFILE" },
             ].map((item) => (
               <button
                 key={item.id}
