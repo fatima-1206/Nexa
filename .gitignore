@@ -17,7 +17,6 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files
-.env*
 
 # vercel
 .vercel
@@ -34,7 +33,6 @@ next-env.d.ts
 Thumbs.db
 
 # Editor / IDE
-.vscode/
 .idea/
 *.suo
 *.user
@@ -58,8 +56,6 @@ output.txt
 node_modules/
 dist/
 *.log
-.env
-.env.local
 backend/resume-parser/parsed-resume.json
 
 backend/prep/selectedSources.json
@@ -74,3 +70,4 @@ backend/rag/ingestion/scraped/*
 backend/rag/ingestion/summaries/*
 !backend/rag/ingestion/summaries/temp.json
 
+config.bat
