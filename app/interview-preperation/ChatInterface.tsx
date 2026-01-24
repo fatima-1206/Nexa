@@ -333,10 +333,9 @@ export default function ChatInterface({
           
           {/* Mode Toggle Slider */}
           <div className="flex items-center gap-3 mr-20">
-
             <div
               className={`relative w-16 h-8 ${
-                mode === 'INTERVIEW' ? 'bg-orange-500' : 'bg-neutral-700'
+                mode === 'INTERVIEW' ? 'bg-orange-500' : 'bg-orange-500'
               } rounded-full cursor-pointer transition-all ${
                 loading ? 'opacity-50 cursor-not-allowed' : ''
               }`}
@@ -346,7 +345,7 @@ export default function ChatInterface({
             >
               <div
                 className={`absolute top-1/2 left-1 w-6 h-6 ${
-                  mode === 'INTERVIEW' ? 'bg-neutral-900' : 'bg-white'
+                  mode === 'INTERVIEW' ? 'bg-neutral-900' : 'bg-neutral-900'
                 } rounded-full shadow-md transform -translate-y-1/2 transition-transform ${
                   mode === 'INTERVIEW' ? 'translate-x-8' : 'translate-x-0'
                 }`}
