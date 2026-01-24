@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, unlink } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { extractTextFromPDF } from '../../../backend/resume-parser/src/pdfExtractor';
 import { AIResumeParser } from '../../../backend/resume-parser/src/aiParser';
 
 export async function POST(request: NextRequest) {
@@ -32,8 +33,8 @@ export async function POST(request: NextRequest) {
     await writeFile(tempFilePath, buffer);
 
     try {
-      // Read the resume text (you may need a PDF parser here)
-      const resumeText = buffer.toString('utf-8'); // Replace with actual PDF-to-text logic
+      // Extract text from PDF
+      const resumeText = await extractTextFromPDF(tempFilePath);
 
       // Parse the resume using AI parser
       const parser = new AIResumeParser(resumeText);

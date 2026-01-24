@@ -31,7 +31,7 @@ export class AIResumeParser {
         ],
         temperature: 0.3,
         max_tokens: 4000,
-        response_format: "verbose_json",
+        response_format: { type: "json_object" },
       });
 
       const content = response.choices[0].message.content;
@@ -51,79 +51,64 @@ export class AIResumeParser {
    * System prompt that defines the parsing task and output format
    */
   private getSystemPrompt(): string {
-    return `You are an expert resume parser. Your task is to extract structured information from resume text and output it as JSON.
+    return `You are an expert resume parser. Extract structured information from resume text and return it as valid JSON.
 
-Extract the following information:
+You must respond with ONLY a JSON object in this exact format (no markdown, no explanations):
 
-1. **profile**: Personal information
-   - name: Full name
-   - title: Current job title or role (e.g., "AI Engineer at Company X | Founder of Y")
-   - location: City, State/Country
-   - email: Email address
-   - phone: Phone number
-   - linkedin: LinkedIn profile URL (just the path, e.g., "linkedin.com/in/username")
-   - github: GitHub profile URL (just the path, e.g., "github.com/username")
-   - website: Personal website URL
-   - summary: Professional summary or objective (2-3 sentences)
-
-2. **skills**: Array of technical skills (programming languages, frameworks, tools, technologies)
-   - Extract all mentioned skills
-   - Keep them concise (e.g., "Machine Learning", "Python", "React")
-   - Remove duplicates
-
-3. **experiences**: Array of work experiences
-   Each experience should have:
-   - title: Job title
-   - company: Company name
-   - location: Work location
-   - period: Time period (e.g., "2024 - Present", "Jan 2023 - Dec 2023")
-   - description: Array of strings describing responsibilities and achievements
-
-4. **education**: Array of educational qualifications
-   Each education entry should have:
-   - degree: Degree name (e.g., "Bachelor of Science in Computer Science")
-   - school: Institution name
-   - location: School location
-   - year: Graduation year
-   - gpa: GPA if mentioned (e.g., "3.8/4.0")
-   - focus: Area of focus or specialization
-
-5. **certifications**: Array of certifications
-   Each certification should have:
-   - name: Certification name
-   - issuer: Issuing organization
-   - year: Year obtained
-
-6. **projects**: Array of projects
-   Each project should have:
-   - name: Project name
-   - description: Brief description of the project
-   - tech: Array of technologies used
-   - impact: Impact or achievement (e.g., "Increased performance by 50%")
-
-IMPORTANT:
-- Output ONLY valid JSON, no additional text
-- If information is not available, use empty string "" or empty array []
-- Extract information as accurately as possible from the provided text
-- Maintain consistent formatting
-- For skills, extract all relevant technical skills mentioned throughout the resume
-
-Return the JSON in this exact structure:
 {
-  "profile": { "name": "", "title": "", "location": "", "email": "", "phone": "", "linkedin": "", "github": "", "website": "", "summary": "" },
-  "skills": [],
-  "experiences": [{ "title": "", "company": "", "location": "", "period": "", "description": [] }],
-  "education": [{ "degree": "", "school": "", "location": "", "year": "", "gpa": "", "focus": "" }],
-  "certifications": [{ "name": "", "issuer": "", "year": "" }],
-  "projects": [{ "name": "", "description": "", "tech": [], "impact": "" }]
-}`;
+  "profile": {
+    "name": "string",
+    "title": "string",
+    "location": "string",
+    "email": "string",
+    "phone": "string",
+    "linkedin": "string",
+    "github": "string",
+    "website": "string",
+    "summary": "string"
+  },
+  "skills": ["skill1", "skill2"],
+  "experiences": [{
+    "title": "string",
+    "company": "string",
+    "location": "string",
+    "period": "string",
+    "description": ["string"]
+  }],
+  "education": [{
+    "degree": "string",
+    "school": "string",
+    "location": "string",
+    "year": "string",
+    "gpa": "string",
+    "focus": "string"
+  }],
+  "certifications": [{
+    "name": "string",
+    "issuer": "string",
+    "year": "string"
+  }],
+  "projects": [{
+    "name": "string",
+    "description": "string",
+    "tech": ["string"],
+    "impact": "string"
+  }]
+}
+
+Rules:
+- Use empty string "" for missing text fields
+- Use empty array [] for missing lists
+- Extract all technical skills mentioned
+- Keep job/project descriptions concise
+- No additional text outside the JSON object`;
   }
 
   /**
    * User prompt with the actual resume text
    */
   private getUserPrompt(): string {
-    return `Please parse the following resume text and extract all information into the specified JSON format:\n\n${this.text}`;
+    return `Parse this resume and return valid JSON:\n\n${this.text}`;
   }
 
   /**
