@@ -64,7 +64,7 @@ export default function TacticalDashboard() {
         <div className="p-4">
           <div className="flex items-center justify-between mb-8">
             <div className={`${sidebarCollapsed ? "hidden" : "block"}`}>
-              <h1 className="text-orange-500 font-bold text-lg tracking-wider">AI INTERVIEW PREP</h1>
+              <h1 className="text-orange-500 font-bold text-lg tracking-wider">Nexa</h1>
               <p className="text-neutral-500 text-xs">Streamline your learning</p>
             </div>
             <Button
@@ -81,12 +81,12 @@ export default function TacticalDashboard() {
 
           <nav className="space-y-2">
             {[
-            //   { id: "overview", icon: Monitor, label: "COMMAND CENTER" },
+              { id: "overview", icon: Monitor, label: "COMMAND CENTER" },
             //   { id: "agents", icon: Users, label: "AGENT NETWORK" },
             //   { id: "operations", icon: Target, label: "OPERATIONS" },
               { id: "jobsFound", icon: Briefcase, label: "JOBS" },
-              { id: "user profile", icon: User, label: "USER PROFILE" },
               { id: "interview preparation", icon: Book, label: "INTERVIEW PREPARATION" },
+              { id: "user profile", icon: User, label: "USER PROFILE" },
             ].map((item) => (
               <button
                 key={item.id}

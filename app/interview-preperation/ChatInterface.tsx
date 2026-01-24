@@ -5,6 +5,15 @@ import { Send, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AILoading from '@/components/kokonutui/ai-loading';
 import ReactMarkdown from 'react-markdown';
+import {
+  Message,
+  ChatSession,
+  saveCurrentSession as saveSession,
+  createNewChat as createChat,
+  loadChatSession as loadSession,
+  deleteSession as removeSession,
+  loadChatSessions,
+} from './history';
 
 interface ChatInterfaceProps {
   interviewData: {
@@ -22,13 +31,6 @@ interface ChatInterfaceProps {
   logs?: string[];
 }
 
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  sources?: Array<{ topic: string; chunkCount: number }>;
-}
-
 export default function ChatInterface({
   interviewData,
   sources,
@@ -43,6 +45,8 @@ export default function ChatInterface({
   const role = interviewData?.role || 'Software Engineer';
   const company = interviewData?.companyName || 'Your Target Company';
 
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -60,6 +64,23 @@ export default function ChatInterface({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleSaveSession = (updatedMessages: Message[]) => {
+    saveSession(activeSessionId, updatedMessages, role, company, setChatSessions);
+  };
+
+  const handleCreateNewChat = () => {
+    createChat(setActiveSessionId, setMessages, sources, role, company);
+  };
+
+  const handleLoadChatSession = (sessionId: string) => {
+    loadSession(sessionId, chatSessions, setActiveSessionId, setMessages);
+  };
+
+  const handleDeleteSession = (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    removeSession(sessionId, role, company, activeSessionId, setChatSessions, handleCreateNewChat);
+  };
+
   const handleScroll = () => {
     if (messagesContainerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
@@ -67,6 +88,11 @@ export default function ChatInterface({
       setShowScrollButton(!isNearBottom);
     }
   };
+
+  // Load chat sessions from localStorage on mount
+  useEffect(() => {
+    loadChatSessions(role, company, setChatSessions, setActiveSessionId, setMessages);
+  }, [role, company]);
 
   useEffect(() => {
     scrollToBottom();
@@ -129,7 +155,17 @@ export default function ChatInterface({
         sources: data.sources,
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      const updatedMessages = [...messages, userMessage, assistantMessage];
+      setMessages(updatedMessages);
+      
+      // Ensure session exists
+      if (!activeSessionId) {
+        const newSessionId = `session_${Date.now()}`;
+        setActiveSessionId(newSessionId);
+      }
+      
+      // Save session
+      setTimeout(() => handleSaveSession(updatedMessages), 100);
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: Message = {
@@ -137,7 +173,9 @@ export default function ChatInterface({
         role: 'assistant',
         content: 'Sorry, I encountered an error. Please try again.',
       };
-      setMessages((prev) => [...prev, errorMessage]);
+      const updatedMessages = [...messages, userMessage, errorMessage];
+      setMessages(updatedMessages);
+      setTimeout(() => handleSaveSession(updatedMessages), 100);
     } finally {
       setLoading(false);
     }
@@ -239,23 +277,47 @@ export default function ChatInterface({
           )}
         </div>
 
-        {/* Quick Prepare Buttons */}
-        <div className="p-4 border-t border-neutral-700 space-y-2 flex-shrink-0">
-          <p className="text-sm font-semibold text-orange-500 mb-3">Quick Prepare</p>
-          {[...missingSkills, ...techStack].length > 0 ? (
-            [...new Set([...missingSkills, ...techStack])].slice(0, 3).map((skill) => (
-              <button
-                key={skill}
-                onClick={() => handlePrepare([skill])}
-                disabled={loading}
-                className="w-full text-left px-3 py-2 text-xs rounded bg-neutral-800 border border-neutral-700 hover:bg-orange-500/10 hover:border-orange-500/50 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium text-orange-300"
-              >
-                {skill}
-              </button>
-            ))
-          ) : (
-            <p className="text-neutral-500 text-xs">No skills to prepare</p>
-          )}
+        {/* Chat History */}
+        <div className="flex-1 border-t border-neutral-700 flex flex-col overflow-hidden">
+          <div className="p-4 flex items-center justify-between flex-shrink-0">
+            <p className="text-sm font-semibold text-orange-500">Your Chats</p>
+            <button
+              onClick={handleCreateNewChat}
+              className="px-3 py-1 text-xs rounded bg-orange-500 hover:bg-orange-600 text-white transition font-medium"
+              title="New Chat"
+            >
+              + New
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
+            {chatSessions.length > 0 ? (
+              chatSessions.map((session) => (
+                <div
+                  key={session.id}
+                  onClick={() => handleLoadChatSession(session.id)}
+                  className={`group relative p-3 rounded cursor-pointer transition ${
+                    activeSessionId === session.id
+                      ? 'bg-orange-500/20 border border-orange-500/50'
+                      : 'bg-neutral-800 border border-neutral-700 hover:bg-neutral-700'
+                  }`}
+                >
+                  <div className="text-xs text-neutral-300 truncate pr-6">{session.title}</div>
+                  <div className="text-[10px] text-neutral-500 mt-1">
+                    {new Date(session.timestamp).toLocaleDateString()}
+                  </div>
+                  <button
+                    onClick={(e) => handleDeleteSession(session.id, e)}
+                    className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-400 transition"
+                    title="Delete chat"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p className="text-neutral-500 text-xs text-center py-4">No chat history yet</p>
+            )}
+          </div>
         </div>
 
         {/* Interview Details */}
