@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, unlink } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { AIResumeParser } from '../../../backend/resume-parser/src/aiParser';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    console.log("Converting file to buffer")
+
     // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
@@ -29,31 +30,19 @@ export async function POST(request: NextRequest) {
     // Save PDF to temporary location
     const tempFilePath = join(tmpdir(), `resume-${Date.now()}.pdf`);
     await writeFile(tempFilePath, buffer);
-    console.log("About to use github token")
 
     try {
-      // Get GitHub token from environment
-      const githubToken = process.env.GITHUB_TOKEN;
-      
-      if (!githubToken) {
-        await unlink(tempFilePath);
-        return NextResponse.json(
-          { error: 'GITHUB_TOKEN is not configured. Please add it to .env.local file.' },
-          { status: 500 }
-        );
-      }
-      
-      // Dynamic import to handle TypeScript files
-      const { parseResumeFromFile } = await import('../../../backend/resume-parser/src/index');
-      
-      // Parse the resume using AI parser (pass the token)
-      const parsedData = await parseResumeFromFile(tempFilePath, githubToken);
-      
+      // Read the resume text (you may need a PDF parser here)
+      const resumeText = buffer.toString('utf-8'); // Replace with actual PDF-to-text logic
+
+      // Parse the resume using AI parser
+      const parser = new AIResumeParser(resumeText);
+      const parsedData = await parser.parse();
+
       // Clean up temporary file
       await unlink(tempFilePath);
-      
+
       return NextResponse.json(parsedData);
-      
     } catch (parseError) {
       // Clean up temp file on error
       try {
@@ -61,14 +50,13 @@ export async function POST(request: NextRequest) {
       } catch (cleanupError) {
         console.error('Cleanup error:', cleanupError);
       }
-      
+
       console.error('Parse error:', parseError);
       return NextResponse.json(
         { error: 'Failed to parse resume', details: String(parseError) },
         { status: 500 }
       );
     }
-    
   } catch (error) {
     console.error('Error parsing resume:', error);
     return NextResponse.json(

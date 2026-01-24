@@ -1,23 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { scrapeSources } from '@/backend/rag/ingestion/webscraper';
 import { summarizeSources } from '@/backend/rag/ingestion/summarization';
-import { loadSummaries, createChunks, saveChunks } from '@/backend/rag/ingestion/chunking';
+import { createChunks } from '@/backend/rag/ingestion/chunking';
 import { prepareChunksForClient, createMemoryVectorStore } from '@/backend/rag/ingestion/embedding';
 import fs from 'fs';
-import path from 'path';
+import Groq from 'groq-sdk';
+
+const groq = new Groq();
 
 interface SkillExtractionResult {
   skills: string[];
   searchQueries: { skill: string; query: string }[];
-}
-
-interface TavilySearchResult {
-  results: Array<{
-    title: string;
-    url: string;
-    content: string;
-    score: number;
-  }>;
 }
 
 /**
@@ -51,27 +44,15 @@ Return ONLY a valid JSON object in this exact format:
 Be thorough but focus on the most important skills mentioned or implied in the job description.`;
 
   try {
-    const response = await fetch('https://models.inference.ai.azure.com/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.3,
-        max_tokens: 2000,
-      }),
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+      max_tokens: 2000,
     });
 
-    if (!response.ok) {
-      throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
-    }
+    const content = response.choices[0].message.content || '';
 
-    const data = await response.json();
-    const content = data.choices[0].message.content || '';
-    
     // Extract JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
@@ -80,7 +61,7 @@ Be thorough but focus on the most important skills mentioned or implied in the j
 
     const result = JSON.parse(jsonMatch[0]) as SkillExtractionResult;
     console.log(`Extracted ${result.skills.length} skills from job description`);
-    
+
     return result;
   } catch (error) {
     console.error('Error extracting skills:', error);
@@ -149,8 +130,8 @@ export async function POST(req: NextRequest) {
     console.log('Starting automated interview preparation...');
 
     const body = await req.json();
-    console.log('Received body:', { 
-      jobTitle: body.jobTitle, 
+    console.log('Received body:', {
+      jobTitle: body.jobTitle,
       company: body.company,
       hasDescription: !!body.jobDescription,
       descriptionLength: body.jobDescription?.length || 0
@@ -201,21 +182,9 @@ export async function POST(req: NextRequest) {
     // Step 3: Process through RAG pipeline
     console.log('Step 3: Processing through RAG pipeline...');
 
-    const baseDir = process.cwd();
-    const scrapedDir = path.join(baseDir, 'backend', 'rag', 'ingestion', 'scraped');
-    const summariesDir = path.join(baseDir, 'backend', 'rag', 'ingestion', 'summaries');
-    const chunksDir = path.join(baseDir, 'backend', 'rag', 'ingestion', 'chunks');
-
-    // Ensure directories exist
-    [scrapedDir, summariesDir, chunksDir].forEach(dir => {
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-    });
-
     // Scrape sources
     console.log('Scraping sources...');
-    const scrapedData = await scrapeSources(sources, scrapedDir);
+    const scrapedData = await scrapeSources(sources);
     
     if (scrapedData.length === 0) {
       return NextResponse.json(
@@ -226,18 +195,16 @@ export async function POST(req: NextRequest) {
 
     // Summarize
     console.log('Generating summaries...');
-    await summarizeSources(scrapedData, summariesDir);
+    const summaries = await summarizeSources(scrapedData);
 
-    // Load summaries and create chunks
+    // Create chunks and vector store (in-memory)
     console.log('Creating chunks...');
-    const summaries = loadSummaries(summariesDir);
     const memoryVectorStore = createMemoryVectorStore();
     let totalChunks = 0;
 
     for (const { title, url, summary } of summaries) {
       try {
         const chunks = createChunks(summary, title, url);
-        saveChunks(chunks, chunksDir, title);
         totalChunks += chunks.length;
 
         // Prepare embeddings

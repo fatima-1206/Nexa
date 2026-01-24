@@ -42,7 +42,6 @@
 
 // Each chunk should answer **one question well**.
 // Import Node.js modules for file system and path operations
-import * as fs from 'fs';
 import * as path from 'path';
 
 // Define the structure of a single chunk of information
@@ -73,19 +72,13 @@ function inferLevel(text: string): "junior" | "mid" | "senior" {
 }
 
 // Loads all summary JSON files from a directory and returns them as LoadedSummary objects
-function loadSummaries(summariesDir: string): LoadedSummary[] {
+function loadSummaries(summariesData:any): LoadedSummary[] {
   const summaries: LoadedSummary[] = [];
-  const files = fs.readdirSync(summariesDir); // List all files in the directory
 
-  for (const file of files) {
-    if (file.endsWith('.json')) { // Only process JSON files
-      const filePath = path.join(summariesDir, file);
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8')); // Parse JSON content
-      const title = path.basename(file, '.json').replace(/_/g, ' '); // Use filename as title
-      // Use data.sourceUrl if present, otherwise empty string
-      summaries.push({ title, url: data.sourceUrl || '', summary: data });
-    }
+  for (const [title, data] of Object.entries(summariesData)) {
+    summaries.push({ title, url: data.sourceUrl || '', summary: data });
   }
+
   return summaries;
 }
 
@@ -165,21 +158,7 @@ function createChunks(summary: any, topic: string, sourceUrl: string): Chunk[] {
   return chunks;
 }
 
-// Saves each chunk as a separate JSON file in the output directory
-function saveChunks(chunks: Chunk[], outputDir: string, topic: string) {
-  // Ensure the output directory exists (create if not)
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-  }
 
-  // Write each chunk to a uniquely named file
-  for (const [index, chunk] of chunks.entries()) {
-    // Sanitize topic for filename and limit length
-    const safeTopic = topic.replace(/\W+/g, '_').slice(0, 30);
-    const filename = `chunk_${safeTopic}_${index + 1}.json`;
-    fs.writeFileSync(path.join(outputDir, filename), JSON.stringify(chunk, null, 2));
-  }
-}
 
 // Main async function to load summaries, chunk them, and save the results
 (async () => {
@@ -193,7 +172,6 @@ function saveChunks(chunks: Chunk[], outputDir: string, topic: string) {
     // For each summary, create and save its chunks
     for (const { title, url, summary } of summaries) {
       const chunks = createChunks(summary, title, url);
-      saveChunks(chunks, outputDir, title);
       totalChunks += chunks.length;
     }
 
@@ -208,4 +186,4 @@ function saveChunks(chunks: Chunk[], outputDir: string, topic: string) {
 
 // Export types and functions for use in other modules
 export type { Chunk, LoadedSummary };
-export { inferLevel, loadSummaries, createChunks, saveChunks };
+export { inferLevel, loadSummaries, createChunks };
