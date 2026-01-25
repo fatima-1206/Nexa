@@ -1,7 +1,7 @@
 # [Nexa – AI-Powered Interview Preparation Platform](https://nexa-interview-prep.vercel.app/)
 
 
-> **Streamline Your Learning, Ace Your Interviews**
+> **Prepare Smarter. Get Hired Faster.**
 
 An intelligent interview preparation platform that combines job search, resume parsing, automated resource curation, and AI-powered coaching to help candidates prepare effectively for their dream jobs.
 
