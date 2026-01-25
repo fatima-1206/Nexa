@@ -1,4 +1,5 @@
 # [Nexa – AI-Powered Interview Preparation Platform](https://nexa-interview-prep.vercel.app/)
+> **Watch the Video Demo**: https://vimeo.com/1158082665
 
 
 > **Prepare Smarter. Get Hired Faster.**
