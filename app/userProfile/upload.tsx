@@ -149,11 +149,13 @@ export default function UploadResume({ onUploadComplete }: UploadResumeProps) {
                   </p>
                 </div>
 
-                {!selectedFile && (
-                  <Button className="bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700">
-                    Select File
-                  </Button>
-                )}
+                {!selectedFile
+                  // && (
+                  // <Button className="bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700">
+                  //   Select File
+                  // </Button>
+                // )
+                }
               </div>
             </label>
           </div>
