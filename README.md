@@ -1,5 +1,5 @@
 # [Nexa – AI-Powered Interview Preparation Platform](https://nexa-interview-prep.vercel.app/)
-> **Watch the Video Demo**: https://vimeo.com/1158082665
+> **Watch the Video Demo**: https://vimeo.com/1158085304?fl=ip&fe=ec
 
 
 > **Prepare Smarter. Get Hired Faster.**
@@ -309,8 +309,10 @@ pnpm lint         # Run ESLint
 ## Team
 
 [**Shilok Kumar**](https://www.shilok.dev/) - Developer  
-**Fatima** - Developer  
-**Ramalah Amir** - Developer
+
+[**Fatima Tu Zahra**](https://fatimatuzahraportfolio.vercel.app/) - Developer  
+
+[**Ramalah Amir**](https://www.linkedin.com/in/ramalah-amir/) - Developer  
 
 ---
 
